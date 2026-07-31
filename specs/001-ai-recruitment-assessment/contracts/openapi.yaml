@@ -1,0 +1,676 @@
+openapi: 3.1.0
+
+info:
+  title: AI 智慧招聘與技術考核系統 API
+  version: 1.0.0
+  description: |
+    對應 spec.md v3 的 REST 契約。所有資料存取一律經由本 API，
+    前端不直連 Supabase（見 research.md R-002）。
+
+    認證分為兩種：
+    - 內部使用者（HR／主管）：Supabase Auth JWT，含 app_role 與 dept_id 自訂 claim
+    - 應徵者：路徑中的 token，無需帳號
+
+    權限由 PostgreSQL RLS 於資料存取層強制執行；本層的角色標註為說明用途，
+    不得作為唯一的授權依據（憲章原則 IV）。
+
+servers:
+  - url: /api
+
+tags:
+  - name: hr
+    description: HR 端點。不得回傳 AI 報告內容與主管內部評語（FR-007、FR-008）
+  - name: manager
+    description: 主管端點。僅限所屬部門（FR-003）
+  - name: candidate
+    description: 應徵者端點。以 token 識別身分（FR-004）
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  # ─────────────────────────── HR ───────────────────────────
+
+  /hr/assessments:
+    get:
+      tags: [hr]
+      summary: 取得全公司考核總覽
+      description: 對應 FR-013、FR-014。回應不含 candidate_answer、ai_chat_history、AI 報告與內部評語。
+      parameters:
+        - { name: dept_id,   in: query, schema: { type: string } }
+        - { name: status,    in: query, schema: { $ref: '#/components/schemas/AssessmentStatus' } }
+        - { name: job_title, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: 考核清單
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AssessmentSummaryHR' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      tags: [hr]
+      summary: 新增考核（含應徵者資訊）
+      description: |
+        對應 FR-009～FR-011、FR-015～FR-017。
+        系統自動指派該部門責任主管、產生 token 並設定 7 天效期。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAssessmentRequest' }
+      responses:
+        '201':
+          description: 建立成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssessmentCreated' }
+        '409':
+          description: 同一 Email 與職缺已有進行中的考核，需 confirm_duplicate=true 才建立（FR-009 邊界情況）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /hr/assessments/{id}/reassign-manager:
+    post:
+      tags: [hr]
+      summary: 重新指派責任主管
+      description: 對應 FR-012。必須寫入 audit_logs 的 MANAGER_REASSIGNED。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [manager_id]
+              properties:
+                manager_id: { type: string, format: uuid }
+      responses:
+        '200': { description: 指派成功 }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /hr/assessments/{id}/regenerate-token:
+    post:
+      tags: [hr]
+      summary: 重新產生專屬連結
+      description: |
+        對應 FR-019。舊 token 立即失效，新效期為 7 天。
+        若原狀態為 EXPIRED，轉回 PENDING_CANDIDATE。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: 新連結
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:            { type: string }
+                  token_expires_at: { type: string, format: date-time }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /hr/assessments/{id}/notification/preview:
+    post:
+      tags: [hr]
+      summary: 產生通知草稿供預覽
+      description: |
+        對應 FR-068、FR-069。依 final_decision 套用制式範本。
+        回應內容**不得**包含內部評語或 AI 報告的任何內容（FR-070）。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: 通知草稿
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject: { type: string }
+                  body:    { type: string }
+        '409':
+          description: 考核尚未達到 DECIDED 狀態
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /hr/assessments/{id}/notification/send:
+    post:
+      tags: [hr]
+      summary: 發送結果通知
+      description: 對應 FR-067、FR-071、FR-072。寄送失敗回傳 200 並將 email_status 標為 FAILED，不拋出例外。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body]
+              properties:
+                subject: { type: string }
+                body:    { type: string }
+      responses:
+        '200':
+          description: 寄送流程完成（成功或失敗皆回傳此狀態）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email_status: { type: string, enum: [SENT, FAILED] }
+                  email_error:  { type: string, nullable: true }
+
+  # ───────────────────────── MANAGER ─────────────────────────
+
+  /manager/assessments:
+    get:
+      tags: [manager]
+      summary: 取得所屬部門的考核清單
+      description: 對應 FR-003。RLS 保證僅回傳同部門資料；跨部門查詢回傳空集合。
+      responses:
+        '200':
+          description: 考核清單
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AssessmentSummaryManager' }
+
+  /manager/assessments/{id}:
+    get:
+      tags: [manager]
+      summary: 取得考核完整內容供審閱
+      description: |
+        對應 FR-060。包含作答內容、沙箱執行紀錄、測試案例通過情形、
+        完整 AI 對話歷程與 AI 評測報告。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: 考核詳情
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AssessmentDetail' }
+        '404':
+          description: 不存在或不屬於該主管的部門（不區分兩者，避免資訊外洩）
+
+  /manager/questions:
+    get:
+      tags: [manager]
+      summary: 取得所屬部門題庫
+      description: 對應 FR-020、FR-023。
+      responses:
+        '200':
+          description: 題庫清單
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Question' }
+
+  /manager/questions/ai-generate:
+    post:
+      tags: [manager]
+      summary: 以 AI 生成題目草稿
+      description: |
+        對應 FR-024、FR-027。回傳草稿供主管檢視與編輯，**不直接指派**（FR-025）。
+        工程類題目的草稿必須包含測試案例。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [skills, difficulty, language]
+              properties:
+                skills:     { type: array, items: { type: string }, example: [Golang, Redis 快取] }
+                difficulty: { type: string, enum: [EASY, MEDIUM, HARD] }
+                language:   { $ref: '#/components/schemas/Language' }
+      responses:
+        '200':
+          description: 題目草稿
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Question' }
+        '503':
+          description: AI 服務不可用；主管輸入內容由前端保留（FR-027）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /manager/assessments/{id}/assign-question:
+    post:
+      tags: [manager]
+      summary: 指派題目並開通測驗
+      description: |
+        對應 FR-023、FR-025、FR-026、FR-028。
+        寫入題目快照，狀態由 PENDING_ASSIGN 轉為 PENDING_CANDIDATE。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { $ref: '#/components/schemas/Question' }
+      responses:
+        '200': { description: 指派成功 }
+        '409':
+          description: 狀態不允許指派，或工程類題目缺少測試案例（FR-026）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /manager/assessments/{id}/decision:
+    post:
+      tags: [manager]
+      summary: 記錄最終決策
+      description: |
+        對應 FR-061～FR-065。以新增 manager_decisions 列的方式保存；
+        再次呼叫視為修訂（revision_no + 1），原紀錄不被覆寫。
+        同一交易內更新 assessments.final_decision。
+        result 為 SECOND_ROUND 時不建立新考核（FR-065）。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              properties:
+                result:           { type: string, enum: [PASS, SECOND_ROUND, FAIL] }
+                internal_comment: { type: string, description: HR 不可讀（FR-007、FR-066） }
+      responses:
+        '200':
+          description: 決策已記錄
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revision_no: { type: integer }
+
+  /manager/assessments/{id}/reevaluate:
+    post:
+      tags: [manager]
+      summary: 重新觸發 AI 評測
+      description: 對應 FR-059。產生新的 ai_reports 列（attempt_no + 1），失敗紀錄保留。
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '202': { description: 評測已排入背景執行 }
+
+  # ──────────────────────── CANDIDATE ────────────────────────
+
+  /candidate/session/{token}:
+    get:
+      tags: [candidate]
+      security: []
+      summary: 載入測驗頁面資料
+      description: |
+        對應 FR-018、FR-029。經 SECURITY DEFINER 函式存取。
+        回應**不含**隱藏測試案例的內容、AI 報告與決策。
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 測驗資料
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CandidateSession' }
+        '410':
+          description: 連結已逾期（FR-018）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '404': { description: token 不存在 }
+
+  /candidate/session/{token}/run:
+    post:
+      tags: [candidate]
+      security: []
+      summary: 試跑程式碼
+      description: |
+        對應 FR-031、FR-032。於沙箱執行（見 sandbox-runner.md）。
+        僅以非隱藏測試案例的 stdin 執行，不回傳測資比對結果。
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, language]
+              properties:
+                code:     { type: string }
+                language: { $ref: '#/components/schemas/Language' }
+                stdin:    { type: string }
+      responses:
+        '200':
+          description: 執行結果（含編譯錯誤與逾時，皆非系統故障，FR-045）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExecutionResult' }
+        '429':
+          description: 已達試跑次數上限（FR-032）；仍可提交
+        '503':
+          description: 沙箱不可用（FR-047）；仍可提交
+        '410': { description: 連結已逾期 }
+
+  /candidate/session/{token}/chat:
+    post:
+      tags: [candidate]
+      security: []
+      summary: 向 AI 助教提問
+      description: |
+        對應 FR-049～FR-052。回覆必須為觀念引導，不得含完整解答（FR-050）。
+        問答一律附加至 ai_chat_history。
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+      responses:
+        '200':
+          description: AI 回覆
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply:               { type: string }
+                  guardrail_triggered: { type: boolean }
+        '503':
+          description: AI 助教不可用；作答、試跑與提交不受影響（FR-052）
+
+  /candidate/session/{token}/submit:
+    post:
+      tags: [candidate]
+      security: []
+      summary: 提交作答
+      description: |
+        對應 FR-033～FR-035、FR-053。單次動作，提交後不可修改。
+        狀態轉為 COMPLETED_AWAITING_REVIEW 並以背景任務觸發評測。
+        評測失敗不影響本回應（FR-059）。
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answer, language]
+              properties:
+                answer:   { type: string }
+                language: { $ref: '#/components/schemas/Language' }
+      responses:
+        '200':
+          description: 提交成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submitted_at: { type: string, format: date-time }
+        '409':
+          description: 已提交過，不允許重複提交（FR-034）
+        '410':
+          description: 連結已逾期
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase Auth JWT，須含 app_role 與 dept_id 自訂 claim
+
+  schemas:
+
+    Language:
+      type: string
+      enum: [javascript, python, go, java, cpp]
+
+    AssessmentStatus:
+      type: string
+      enum: [PENDING_ASSIGN, PENDING_CANDIDATE, COMPLETED_AWAITING_REVIEW, DECIDED, EXPIRED]
+
+    CreateAssessmentRequest:
+      type: object
+      required: [name, email, job_title, dept_id]
+      properties:
+        name:              { type: string, maxLength: 100 }
+        email:             { type: string, format: email, maxLength: 150 }
+        phone:             { type: string, maxLength: 50 }
+        job_title:         { type: string, maxLength: 100 }
+        dept_id:           { type: string }
+        confirm_duplicate: { type: boolean, default: false, description: 已有進行中考核時需明確為 true }
+
+    AssessmentCreated:
+      type: object
+      properties:
+        id:               { type: string, format: uuid }
+        token:            { type: string }
+        token_expires_at: { type: string, format: date-time }
+        status:           { $ref: '#/components/schemas/AssessmentStatus' }
+        assigned_manager: { type: string }
+
+    AssessmentSummaryHR:
+      type: object
+      description: HR 可見欄位。刻意不含 ai_report、internal_comment、candidate_answer。
+      properties:
+        id:               { type: string, format: uuid }
+        name:             { type: string }
+        email:            { type: string }
+        job_title:        { type: string }
+        dept_id:          { type: string }
+        assigned_manager: { type: string }
+        status:           { $ref: '#/components/schemas/AssessmentStatus' }
+        final_decision:
+          type: string
+          enum: [PASS, SECOND_ROUND, FAIL]
+          nullable: true
+          description: 僅結果列舉值，不含評語（FR-007）
+        email_status:     { type: string, enum: [NOT_SENT, SENT, FAILED] }
+        token_expires_at: { type: string, format: date-time }
+        created_at:       { type: string, format: date-time }
+
+    AssessmentSummaryManager:
+      allOf:
+        - $ref: '#/components/schemas/AssessmentSummaryHR'
+        - type: object
+          properties:
+            has_report: { type: boolean }
+
+    AssessmentDetail:
+      type: object
+      description: 主管專用。HR 呼叫此端點必須被拒絕。
+      properties:
+        id:                { type: string, format: uuid }
+        name:              { type: string }
+        email:             { type: string }
+        job_title:         { type: string }
+        status:            { $ref: '#/components/schemas/AssessmentStatus' }
+        question_snapshot: { $ref: '#/components/schemas/Question' }
+        code_language:     { $ref: '#/components/schemas/Language' }
+        candidate_answer:  { type: string, nullable: true }
+        ai_chat_history:
+          type: array
+          items: { $ref: '#/components/schemas/ChatMessage' }
+        executions:
+          type: array
+          items: { $ref: '#/components/schemas/ExecutionResult' }
+        ai_report:
+          oneOf:
+            - { $ref: '#/components/schemas/AiReport' }
+            - { type: 'null' }
+        decisions:
+          type: array
+          items: { $ref: '#/components/schemas/Decision' }
+
+    Question:
+      type: object
+      required: [title, difficulty, language, description]
+      properties:
+        id:          { type: string, format: uuid, nullable: true }
+        source:      { type: string, enum: [BANK, AI_GENERATED] }
+        title:       { type: string, maxLength: 200 }
+        category:    { type: string }
+        difficulty:  { type: string, enum: [EASY, MEDIUM, HARD] }
+        language:    { $ref: '#/components/schemas/Language' }
+        description: { type: string }
+        constraints: { type: string }
+        test_cases:
+          type: array
+          minItems: 0
+          description: 工程類部門必須 ≥ 1（FR-022、FR-026）
+          items: { $ref: '#/components/schemas/TestCase' }
+
+    TestCase:
+      type: object
+      required: [name, stdin, expected_stdout, is_hidden]
+      properties:
+        name:            { type: string }
+        stdin:           { type: string }
+        expected_stdout: { type: string }
+        is_hidden:       { type: boolean }
+        timeout_seconds: { type: integer, default: 10, maximum: 10 }
+
+    CandidateSession:
+      type: object
+      description: 應徵者可見範圍。隱藏測試案例的 stdin 與 expected_stdout 必須被移除。
+      properties:
+        job_title:        { type: string }
+        dept_type:        { type: string, enum: [ENGINEERING, NON_ENGINEERING] }
+        status:           { $ref: '#/components/schemas/AssessmentStatus' }
+        token_expires_at: { type: string, format: date-time }
+        question:
+          type: object
+          properties:
+            title:       { type: string }
+            description: { type: string }
+            constraints: { type: string }
+            language:    { $ref: '#/components/schemas/Language' }
+            sample_cases:
+              type: array
+              description: 僅 is_hidden = false 的案例
+              items:
+                type: object
+                properties:
+                  name:            { type: string }
+                  stdin:           { type: string }
+                  expected_stdout: { type: string }
+        trial_runs_remaining: { type: integer }
+        chat_history:
+          type: array
+          items: { $ref: '#/components/schemas/ChatMessage' }
+
+    ChatMessage:
+      type: object
+      properties:
+        role:                { type: string, enum: [candidate, assistant] }
+        content:             { type: string }
+        created_at:          { type: string, format: date-time }
+        guardrail_triggered: { type: boolean }
+
+    ExecutionResult:
+      type: object
+      properties:
+        stdout:      { type: string, description: 上限 1 MB，超過截斷 }
+        stderr:      { type: string }
+        exit_code:   { type: integer, nullable: true }
+        duration_ms: { type: integer }
+        termination_reason:
+          type: string
+          enum: [COMPLETED, TIMEOUT, MEMORY_LIMIT, PIDS_LIMIT, OUTPUT_LIMIT, COMPILE_ERROR, SANDBOX_UNAVAILABLE]
+        truncated:   { type: boolean }
+
+    AiReport:
+      type: object
+      description: 刻意不含加權總分與綜合建議（FR-057、憲章原則 V）
+      properties:
+        attempt_no:       { type: integer }
+        status:           { type: string, enum: [PENDING, SUCCESS, FAILED] }
+        test_pass_ratio:  { type: number, nullable: true }
+        model_id:         { type: string }
+        error_message:    { type: string, nullable: true }
+        dimensions:
+          type: object
+          required: [correctness, maintainability, performance, security]
+          properties:
+            correctness:     { $ref: '#/components/schemas/Dimension' }
+            maintainability: { $ref: '#/components/schemas/Dimension' }
+            performance:     { $ref: '#/components/schemas/Dimension' }
+            security:        { $ref: '#/components/schemas/Dimension' }
+        advisory_notice:
+          type: string
+          description: 固定文字，標示此為 AI 輔助建議（FR-058）
+
+    Dimension:
+      type: object
+      required: [score, comment]
+      properties:
+        score:   { type: integer, minimum: 0, maximum: 100 }
+        comment: { type: string }
+
+    Decision:
+      type: object
+      properties:
+        revision_no:      { type: integer }
+        result:           { type: string, enum: [PASS, SECOND_ROUND, FAIL] }
+        internal_comment: { type: string, description: 僅同部門主管可見（FR-066） }
+        decided_by:       { type: string }
+        decided_at:       { type: string, format: date-time }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:    { type: string }
+        message: { type: string, description: 繁體中文，不得含個資或作答內容（FR-079、FR-080） }
+
+  responses:
+    Unauthorized:
+      description: 未認證
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: 角色不符
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: 不存在，或無權存取（不區分兩者）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: 輸入驗證失敗
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }

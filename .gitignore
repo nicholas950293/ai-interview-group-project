@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# 環境設定與機密（憲章「技術與資料限制」：金鑰不得進入版本控制）
+.env
+.env.*
+!.env.example
+
+# 前端
+node_modules/
+
+# 作業系統
+.DS_Store
+Thumbs.db
+
+# 編輯器
+.idea/
+*.swp
+
+# 本機暫用腳本（讀取 PRD .docx 用，非專案內容；若需納管請移除此行）
+extract_docx.py
