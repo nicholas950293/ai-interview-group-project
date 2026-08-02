@@ -14,6 +14,9 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # 缺少任一項即無法安全地強制執行權限，因此列為必要
 REQUIRED_KEYS = ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_JWT_SECRET")
@@ -97,7 +100,12 @@ def _int(env: Mapping[str, str], key: str, default: int) -> int:
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """自環境變數載入設定；缺少必要變數時立即失敗。"""
-    env = os.environ if env is None else env
+    if env is None:
+        project_root = Path(__file__).resolve().parents[2]
+        dotenv_path = project_root / ".env"
+        if dotenv_path.exists():
+            load_dotenv(dotenv_path, override=False)
+        env = os.environ
 
     missing = [key for key in REQUIRED_KEYS if not _clean(env, key)]
     if missing:

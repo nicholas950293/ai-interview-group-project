@@ -199,4 +199,6 @@ def _register_error_handlers(app: FastAPI) -> None:
         return _error_response(422, "VALIDATION_ERROR", "輸入驗證失敗：" + "、".join(fields))
 
 
+app = create_app()
+
 app_context_type = RequestContext  # 供型別提示重新匯出
