@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python .specify/scripts/python/check_prerequisites.py --json --require-tasks --include-tasks)",
+      "Bash(python3 .specify/scripts/python/check_prerequisites.py --json --require-tasks --include-tasks)",
+      "Bash(python3 -c \"import pytest; print\\('pytest', pytest.__version__\\)\")",
+      "Bash(python3 -c \"import fastapi; print\\('fastapi', fastapi.__version__\\)\")",
+      "Bash(docker info *)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/python -c \"import pytest;print\\('pytest ok', pytest.__version__\\)\")",
+      "Bash(python3 -)"
+    ]
+  }
+}

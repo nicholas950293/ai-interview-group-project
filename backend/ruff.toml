@@ -1,0 +1,24 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "S",   # flake8-bandit
+    "ASYNC",
+]
+ignore = [
+    "B008",  # FastAPI 的 Depends() 慣用於預設引數
+]
+
+[lint.per-file-ignores]
+# 測試允許 assert 與合成憑證常數。以 **/ 開頭，使規則不因 ruff 的
+# 呼叫位置（repo 根目錄或 backend/）而失效。
+"**/tests/**" = ["S101", "S105", "S106", "SLF001"]
+
+[format]
+quote-style = "double"

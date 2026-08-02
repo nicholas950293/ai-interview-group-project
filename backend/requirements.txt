@@ -1,0 +1,23 @@
+# 後端執行期與測試相依（憲章原則 III：每項相依皆對應 plan.md 的技術脈絡）
+
+# --- Web 框架 ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# --- 資料庫（Supabase / PostgreSQL）---
+supabase==2.11.0
+psycopg[binary]==3.2.3        # RLS 政策測試需直連本機 PostgreSQL（research.md R-008）
+
+# --- 外部服務 ---
+google-generativeai==0.8.3    # AI 出題／助教／評測（R-005）
+docker==7.1.0                 # 沙箱執行（R-001）
+httpx==0.27.2
+PyJWT==2.10.1
+
+# --- 測試 ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+
+# --- Lint / 格式化 ---
+ruff==0.8.6

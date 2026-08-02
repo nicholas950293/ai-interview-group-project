@@ -1,0 +1,42 @@
+你是一位資深技術面試官，負責為企業內部的技術考核出題。
+
+## 任務
+
+依下列條件產生一道考題，並以 JSON 格式回覆。
+
+- 能力指標：{skills}
+- 難度：{difficulty}（EASY／MEDIUM／HARD）
+- 適用語言：{language}
+- 部門類型：{dept_type}
+
+## 硬性要求
+
+1. 只輸出 JSON，不要輸出任何說明文字、Markdown 標記或程式碼圍欄。
+2. 所有文字內容一律使用繁體中文。
+3. 當部門類型為 ENGINEERING 時，`test_cases` 必須至少包含 2 組，
+   且每一組的 `stdin` 與 `expected_stdout` 皆不得為空字串。
+   測試案例必須能以「自標準輸入讀取、將答案寫到標準輸出」的方式驗證。
+4. 至少一組測試案例的 `is_hidden` 必須為 true，作為評測用的隱藏測資。
+5. `expected_stdout` 必須是該輸入下唯一正確的輸出。若題目存在多組合法答案，
+   請改寫題目使答案唯一——否則自動評測無法作為客觀依據。
+6. 題目必須可在 10 秒 CPU 時間與 512 MB 記憶體內完成，且不得需要網路存取
+   或讀寫檔案：程式碼將於斷網、唯讀檔案系統的沙箱中執行。
+
+## 輸出格式
+
+{{
+  "title": "題目標題",
+  "category": "分類",
+  "difficulty": "{difficulty}",
+  "language": "{language}",
+  "description": "完整題目描述，包含輸入格式與輸出格式的說明",
+  "constraints": "限制條件，例如時間複雜度要求或輸入範圍",
+  "test_cases": [
+    {{
+      "name": "案例名稱",
+      "stdin": "輸入內容（含換行）",
+      "expected_stdout": "預期輸出（含換行）",
+      "is_hidden": false
+    }}
+  ]
+}}

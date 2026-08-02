@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>主管 Hub｜AI 智慧招聘與技術考核系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-semibold">主管 Hub<span id="dept-label" class="ml-2 text-sm font-normal text-slate-500"></span></h1>
+      <span id="current-user" class="text-sm text-slate-500"></span>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-6 py-6 grid gap-6 lg:grid-cols-[380px_1fr]">
+
+    <section aria-label="部門考核清單" class="bg-white rounded border border-slate-200">
+      <h2 class="px-4 py-3 text-sm font-semibold border-b border-slate-200">部門考核</h2>
+      <ul id="assessment-list" class="divide-y divide-slate-100"></ul>
+      <p id="list-empty" class="hidden px-4 py-6 text-sm text-slate-500">所屬部門目前沒有考核。</p>
+    </section>
+
+    <section id="detail-panel" class="space-y-6">
+      <p id="detail-placeholder" class="text-sm text-slate-500">請自左側選擇一筆考核。</p>
+
+      <!-- 出題與指派（FR-023～FR-028）-->
+      <div id="assign-panel" class="hidden bg-white rounded border border-slate-200 p-4 space-y-4">
+        <h2 class="text-sm font-semibold">指派題目</h2>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="text-sm">自題庫挑選
+            <select id="bank-select" class="mt-1 w-full rounded border border-slate-300 p-2 text-sm">
+              <option value="">— 請選擇 —</option>
+            </select>
+          </label>
+          <form id="ai-form" class="text-sm space-y-2">
+            <div class="font-medium">或以 AI 生成</div>
+            <input id="ai-skills" placeholder="能力指標，逗號分隔（例：Golang, Redis 快取）" class="w-full rounded border border-slate-300 p-2">
+            <div class="flex gap-2">
+              <select id="ai-difficulty" class="rounded border border-slate-300 p-2">
+                <option value="EASY">簡單</option>
+                <option value="MEDIUM" selected>中等</option>
+                <option value="HARD">困難</option>
+              </select>
+              <select id="ai-language" class="rounded border border-slate-300 p-2">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="go">Go</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+              </select>
+              <button type="submit" class="rounded bg-slate-900 px-3 py-2 text-white">生成草稿</button>
+            </div>
+            <p id="ai-error" class="hidden text-red-600"></p>
+          </form>
+        </div>
+
+        <!-- 草稿編輯：AI 產出必須經主管確認後才可指派（FR-025）-->
+        <div id="draft-editor" class="hidden space-y-3 border-t border-slate-200 pt-4">
+          <label class="block text-sm">標題<input id="draft-title" class="mt-1 w-full rounded border border-slate-300 p-2"></label>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <label class="block text-sm">分類<input id="draft-category" class="mt-1 w-full rounded border border-slate-300 p-2"></label>
+            <label class="block text-sm">難度
+              <select id="draft-difficulty" class="mt-1 w-full rounded border border-slate-300 p-2">
+                <option value="EASY">簡單</option><option value="MEDIUM">中等</option><option value="HARD">困難</option>
+              </select>
+            </label>
+            <label class="block text-sm">語言
+              <select id="draft-language" class="mt-1 w-full rounded border border-slate-300 p-2">
+                <option value="javascript">JavaScript</option><option value="python">Python</option>
+                <option value="go">Go</option><option value="java">Java</option><option value="cpp">C++</option>
+              </select>
+            </label>
+          </div>
+          <label class="block text-sm">題目描述<textarea id="draft-description" rows="6" class="mt-1 w-full rounded border border-slate-300 p-2"></textarea></label>
+          <label class="block text-sm">限制條件<textarea id="draft-constraints" rows="3" class="mt-1 w-full rounded border border-slate-300 p-2"></textarea></label>
+          <div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="font-medium">測試案例<span class="ml-2 text-xs text-slate-500">工程類題目必須至少 1 組（FR-026）</span></span>
+              <button type="button" id="add-case" class="rounded border border-slate-300 px-2 py-1 text-xs">新增一組</button>
+            </div>
+            <div id="case-list" class="mt-2 space-y-2"></div>
+          </div>
+          <p id="assign-error" class="hidden text-sm text-red-600"></p>
+          <button type="button" id="btn-assign" class="rounded bg-slate-900 px-4 py-2 text-sm text-white">確認並指派</button>
+        </div>
+      </div>
+
+      <!-- 審閱與決策（FR-060～FR-066）-->
+      <div id="review-panel" class="hidden space-y-4"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./js/manager.js"></script>
+</body>
+</html>
