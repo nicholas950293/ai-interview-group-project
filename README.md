@@ -13,6 +13,11 @@
 ```text
 backend/     FastAPI 服務。src/ 為程式碼，tests/ 為測試（憲章要求兩者分離）
 frontend/    靜態前端（原生 ES2022 模組 + Tailwind CDN，無建置流程）
+  index.html / manager.html / js/hr.js / js/manager.js   內部介面（HR、主管）
+  js/api.js                                              對後端的唯一呼叫點
+  candidate/                                             應徵者作答介面（獨立產品模組，spec 002）
+    core/   純邏輯，不碰 DOM，可於 Node 直接測試
+    ui/     DOM 綁定，不做判定、不呼叫 API
 sandbox/     五種語言的沙箱映像檔定義
 supabase/    版本控管的資料庫遷移檔與合成測試資料
 specs/       規格、計畫、資料模型、契約與任務清單
@@ -63,6 +68,21 @@ TEST_DATABASE_URL=postgresql://localhost/test_recruitment pytest -m postgres
 ```
 
 `pytest` 預設即排除 `security` 標記，因此「直接執行 pytest」等同於離線套件。
+
+### 前端測試
+
+應徵者介面的純邏輯層（`frontend/candidate/core/`）以 Node 內建的測試執行器驗證，
+不需要 npm 安裝、瀏覽器或網路（需 Node 18 以上）：
+
+```bash
+cd frontend
+node --test "candidate/tests/*.test.js"   # 或 npm test
+```
+
+`frontend/package.json` 只宣告 `"type": "module"` 與測試指令，不含任何相依套件——
+專案維持「無建置流程」的既有決策。應徵者介面的結構性不變條件（禁止直接 `fetch`、
+角色間的匯入邊界、頁面路徑不遮蔽 API 路由）由
+`backend/tests/unit/test_candidate_frontend_boundaries.py` 守護，隨 `pytest` 一併執行。
 
 ## 品質關卡
 

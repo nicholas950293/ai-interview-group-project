@@ -153,7 +153,14 @@ frontend/
 │   ├── editor.js            # CodeMirror 6 整合
 │   └── chat.js
 └── css/
+```
 
+> **後續變更**：應徵者前端已於
+> [spec 002](../002-candidate-assessment-ui/spec.md) 移入 `frontend/candidate/`，
+> `editor.js` 與 `chat.js` 隨之拆分搬移，原 `assessment.html` 改為保留舊連結的轉址頁。
+> 後端與 candidate API 未因該次變更而調整。
+
+```text
 sandbox/
 ├── javascript/Dockerfile
 ├── python/Dockerfile

@@ -4,80 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>線上測驗｜AI 智慧招聘與技術考核系統</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="robots" content="noindex">
+  <!--
+    舊路徑的轉址頁（FR-106）。
+
+    應徵者作答頁已移至 /candidate/assessment.html，但測驗連結的效期是 7 天，
+    寄出去的信不能追回來——這一頁的存在就是為了讓那些連結不失效。
+    token 以原樣轉送，不做任何解析或儲存。
+
+    移除時機為獨立決策；最早不得早於最後一封含舊路徑的邀請信逾期之後。
+  -->
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body>
+  <p>正在前往線上測驗頁面…</p>
+  <p><a id="manual-link" href="./candidate/assessment.html">若未自動跳轉，請點此繼續</a></p>
 
-  <header class="bg-white border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <h1 id="job-title" class="text-lg font-semibold">線上測驗</h1>
-      <div class="text-sm text-slate-500">
-        <span id="expires-at"></span>
-        <span id="trial-remaining" class="ml-4"></span>
-      </div>
-    </div>
-  </header>
-
-  <!-- 逾期、未指派題目、已提交等狀態的單一提示區 -->
-  <div id="notice" class="hidden max-w-3xl mx-auto mt-10 rounded border p-6 text-sm"></div>
-
-  <main id="workspace" class="hidden max-w-7xl mx-auto px-6 py-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
-
-    <section aria-label="題目" class="space-y-4">
-      <article class="bg-white rounded border border-slate-200 p-4">
-        <h2 id="question-title" class="text-base font-semibold"></h2>
-        <div id="question-description" class="mt-3 whitespace-pre-wrap text-sm"></div>
-        <div id="question-constraints" class="mt-3 whitespace-pre-wrap text-sm text-slate-600"></div>
-        <div id="sample-cases" class="mt-4 space-y-2 text-xs"></div>
-      </article>
-
-      <!-- AI 助教（US7）-->
-      <article class="bg-white rounded border border-slate-200 flex flex-col" style="max-height:420px">
-        <h2 class="px-4 py-3 text-sm font-semibold border-b border-slate-200">AI 助教<span class="ml-2 font-normal text-xs text-slate-500">提供觀念引導，不提供完整解答</span></h2>
-        <div id="chat-log" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm"></div>
-        <form id="chat-form" class="border-t border-slate-200 p-3 flex gap-2">
-          <input id="chat-input" class="flex-1 rounded border border-slate-300 p-2 text-sm" placeholder="輸入問題…">
-          <button type="submit" class="rounded bg-slate-900 px-3 py-2 text-sm text-white">送出</button>
-        </form>
-        <p id="chat-error" class="hidden px-4 pb-3 text-xs text-amber-700"></p>
-      </article>
-    </section>
-
-    <section aria-label="作答" class="space-y-4">
-      <div class="bg-white rounded border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2">
-          <label class="text-sm">語言
-            <select id="language-select" class="ml-2 rounded border border-slate-300 p-1 text-sm">
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="go">Go</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-            </select>
-          </label>
-          <div class="flex gap-2">
-            <button id="btn-run" class="rounded border border-slate-300 px-3 py-1.5 text-sm">試跑</button>
-            <button id="btn-submit" class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">提交作答</button>
-          </div>
-        </div>
-        <!-- 工程類：CodeMirror 掛載點；非工程類：文字作答（FR-029）-->
-        <div id="code-editor" class="min-h-[320px]"></div>
-        <textarea id="text-answer" rows="16" class="hidden w-full p-4 text-sm" placeholder="請於此處作答…"></textarea>
-      </div>
-
-      <div class="bg-white rounded border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-sm">
-          <span class="font-semibold">執行結果</span>
-          <span id="run-meta" class="text-xs text-slate-500"></span>
-        </div>
-        <label class="block px-4 pt-3 text-xs text-slate-500">標準輸入
-          <textarea id="run-stdin" rows="2" class="mt-1 w-full rounded border border-slate-300 p-2 font-mono text-xs"></textarea>
-        </label>
-        <pre id="run-output" class="px-4 py-3 text-xs whitespace-pre-wrap font-mono"></pre>
-      </div>
-    </section>
-  </main>
-
-  <script type="module" src="./js/editor.js"></script>
+  <script>
+    // 保留完整查詢字串（含 token），路徑以外的一切都不改動
+    var target = './candidate/assessment.html' + window.location.search + window.location.hash;
+    document.getElementById('manual-link').href = target;
+    // replace 而非 assign：使用者按上一頁時不該又被彈回這一頁
+    window.location.replace(target);
+  </script>
 </body>
 </html>

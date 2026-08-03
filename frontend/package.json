@@ -1,0 +1,8 @@
+{
+  "name": "recruitment-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test candidate/tests/*.test.js"
+  }
+}
