@@ -10,15 +10,20 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
+from backend.src.ai.fake_provider import FakeAiProvider
 from backend.src.ai.provider import AiProvider, AiUnavailableError
 from backend.src.audit.logger import REDACTED, scrub_text
 from backend.src.config import Settings, load_settings
+from backend.src.demo import build_demo_store_factory
+from backend.src.email.fake_sender import FakeEmailSender
 from backend.src.email.sender import EmailSender
 from backend.src.repositories.base import (
     DataAccessError,
@@ -26,6 +31,7 @@ from backend.src.repositories.base import (
     ServiceRoleMisuseError,
     create_supabase_store,
 )
+from backend.src.sandbox.fake_runner import FakeSandboxRunner
 from backend.src.sandbox.runner import SandboxRunner
 from backend.src.services.errors import AppError, ServiceUnavailableError
 from backend.src.services.state_machine import InvalidTransitionError, UnknownStatusError
@@ -118,13 +124,11 @@ def create_app(
     app = FastAPI(
         title="AI 智慧招聘與技術考核系統 API",
         version="1.0.0",
-        root_path="/api",
     )
     app.state.settings = settings
     app.state.logger = logger
-    app.state.store_factory = store_factory or (
-        lambda context: create_supabase_store(settings, context)
-    )
+    app.state.demo_mode = settings.demo_mode
+    app.state.store_factory = store_factory or _default_store_factory(settings)
     app.state.ai_provider = ai_provider or _default_ai_provider(settings)
     app.state.sandbox_runner = sandbox_runner or _default_sandbox_runner(settings)
     app.state.email_sender = email_sender or _default_email_sender(settings)
@@ -134,19 +138,31 @@ def create_app(
     return app
 
 
+def _default_store_factory(settings: Settings) -> Any:
+    if settings.demo_mode:
+        return build_demo_store_factory()
+    return lambda context: create_supabase_store(settings, context)
+
+
 def _default_ai_provider(settings: Settings) -> AiProvider:
+    if settings.demo_mode or not settings.ai.configured:
+        return FakeAiProvider()
     from backend.src.ai.gemini_provider import GeminiProvider
 
     return GeminiProvider(settings.ai)
 
 
 def _default_sandbox_runner(settings: Settings) -> SandboxRunner:
+    if settings.demo_mode:
+        return FakeSandboxRunner()
     from backend.src.sandbox.docker_runner import DockerSandboxRunner
 
     return DockerSandboxRunner(settings.sandbox)
 
 
 def _default_email_sender(settings: Settings) -> EmailSender:
+    if settings.demo_mode:
+        return FakeEmailSender()
     from backend.src.email.smtp_sender import SmtpEmailSender
 
     return SmtpEmailSender(settings.smtp)
@@ -159,9 +175,21 @@ def _register_routes(app: FastAPI) -> None:
     app.include_router(manager.router)
     app.include_router(candidate.router)
 
+    app.include_router(hr.router, prefix="/api")
+    app.include_router(manager.router, prefix="/api")
+    app.include_router(candidate.router, prefix="/api")
+
     @app.get("/health", tags=["ops"])
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/api/health", tags=["ops"])
+    async def api_health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
+    if frontend_dir.exists():
+        app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 
 def _register_error_handlers(app: FastAPI) -> None:

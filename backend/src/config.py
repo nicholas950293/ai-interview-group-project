@@ -78,6 +78,7 @@ class Settings:
     token_ttl_days: int
     max_trial_runs: int
     candidate_base_url: str
+    demo_mode: bool
 
 
 def _clean(env: Mapping[str, str], key: str) -> str | None:
@@ -98,6 +99,10 @@ def _int(env: Mapping[str, str], key: str, default: int) -> int:
         raise ConfigError(f"環境變數 {key} 必須為整數，實際值不合法") from exc
 
 
+def _is_demo_mode(env: Mapping[str, str]) -> bool:
+    return bool(_clean(env, "LOCAL_DEMO_MODE"))
+
+
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """自環境變數載入設定；缺少必要變數時立即失敗。"""
     if env is None:
@@ -107,8 +112,15 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             load_dotenv(dotenv_path, override=False)
         env = os.environ
 
+    env = dict(env)
+    demo_mode = _is_demo_mode(env)
+    if demo_mode:
+        env["SUPABASE_URL"] = "https://example.supabase.co"
+        env["SUPABASE_ANON_KEY"] = "example-anon-key"
+        env["SUPABASE_JWT_SECRET"] = "demo-jwt-secret"
+
     missing = [key for key in REQUIRED_KEYS if not _clean(env, key)]
-    if missing:
+    if missing and not demo_mode:
         raise ConfigError("缺少必要環境變數：" + "、".join(missing))
 
     return Settings(
@@ -137,4 +149,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         token_ttl_days=_int(env, "TOKEN_TTL_DAYS", DEFAULT_TOKEN_TTL_DAYS),
         max_trial_runs=_int(env, "MAX_TRIAL_RUNS", DEFAULT_MAX_TRIAL_RUNS),
         candidate_base_url=(_clean(env, "CANDIDATE_BASE_URL") or "").rstrip("/"),
+        demo_mode=demo_mode,
     )
