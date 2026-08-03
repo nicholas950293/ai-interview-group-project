@@ -23,6 +23,7 @@ REQUIRED_KEYS = ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_JWT_SECRET")
 
 DEFAULT_TOKEN_TTL_DAYS = 7
 DEFAULT_MAX_TRIAL_RUNS = 20
+DEFAULT_SESSION_TTL_HOURS = 8
 DEFAULT_SANDBOX_CONCURRENCY = 10
 
 
@@ -79,6 +80,8 @@ class Settings:
     max_trial_runs: int
     candidate_base_url: str
     demo_mode: bool
+    # 內部使用者登入後的權杖效期（FR-005）。應徵者的連結效期是另一回事，見 token_ttl_days。
+    session_ttl_hours: int
 
 
 def _clean(env: Mapping[str, str], key: str) -> str | None:
@@ -150,4 +153,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         max_trial_runs=_int(env, "MAX_TRIAL_RUNS", DEFAULT_MAX_TRIAL_RUNS),
         candidate_base_url=(_clean(env, "CANDIDATE_BASE_URL") or "").rstrip("/"),
         demo_mode=demo_mode,
+        session_ttl_hours=_int(env, "SESSION_TTL_HOURS", DEFAULT_SESSION_TTL_HOURS),
     )

@@ -30,11 +30,12 @@ def test_demo_mode_bootstraps_in_memory_store_and_seed_data(demo_settings):
 
     health = client.get("/health")
     assert health.status_code == 200
-    assert health.json() == {"status": "ok"}
+    assert health.json()["status"] == "ok"
+    assert health.json()["demo_mode"] is True
 
     api_health = client.get("/api/health")
     assert api_health.status_code == 200
-    assert api_health.json() == {"status": "ok"}
+    assert api_health.json()["status"] == "ok"
 
     candidate = client.get("/candidate/session/demo-candidate-001")
     assert candidate.status_code == 200

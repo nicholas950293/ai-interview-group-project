@@ -23,6 +23,7 @@ from typing import Any
 
 from backend.src.repositories.base import (
     APPEND_ONLY_TABLES,
+    ROLE_AUTHENTICATED,
     ROLE_CANDIDATE,
     ROLE_HR,
     ROLE_MANAGER,
@@ -179,6 +180,11 @@ class InMemoryDataStore:
     def _can_read(self, table: str, row: dict[str, Any]) -> bool:
         ctx = self._context
         role = ctx.role
+
+        # 登入中的身分只能讀自己那一列，其餘一律不可見
+        # （鏡射 0012 的 internal_users_bootstrap_select）
+        if role == ROLE_AUTHENTICATED:
+            return table == "internal_users" and row.get("auth_user_id") == ctx.auth_user_id
 
         # 應徵者與系統角色對底層資料表沒有任何權限（0009 REVOKE ALL ... FROM anon）
         if role not in (ROLE_HR, ROLE_MANAGER):

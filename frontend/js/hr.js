@@ -3,6 +3,7 @@
 // 這個畫面刻意沒有「檢視 AI 報告」或「檢視內部評語」的入口——
 // 不是因為隱藏，而是因為後端根本不會回傳這些欄位（FR-008）。
 
+import { requireSession, handleAuthFailure, getProfile } from './session.js';
 import {
   hr,
   ApiError,
@@ -197,10 +198,8 @@ function reportInline(element, error) {
 }
 
 function reportError(error) {
-  if (error instanceof ApiError && error.status === 401) {
-    window.alert('請先登入。');
-    return;
-  }
+  // 權杖過期就回登入頁；以前這裡只能 alert「請先登入」，因為還沒有登入頁
+  if (error instanceof ApiError && handleAuthFailure(error.status)) return;
   window.alert(error instanceof ApiError ? error.message : '操作失敗，請稍後再試。');
 }
 
@@ -209,5 +208,8 @@ filterForm.addEventListener('submit', (event) => {
   refresh();
 });
 
-document.getElementById('current-user').textContent = 'HR';
-loadDepartments().then(refresh);
+if (requireSession()) {
+  const profile = getProfile();
+  document.getElementById('current-user').textContent = profile ? `${profile.name}｜HR` : 'HR';
+  loadDepartments().then(refresh);
+}

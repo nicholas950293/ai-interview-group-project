@@ -1,0 +1,36 @@
+/* 登入頁的版面。色票與元件全部來自 theme.css，本檔不定義任何顏色。 */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-frame);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 20px;
+}
+
+.panel.login {
+  width: 420px;
+  max-width: 100%;
+  animation: dcPop .2s ease;
+}
+
+.login__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 20px;
+}
+
+.login__actions { display: flex; justify-content: flex-end; }
+.login__actions .btn { min-width: 96px; }
+
+#demo-hint { width: 420px; max-width: 100%; font-size: 12.5px; }

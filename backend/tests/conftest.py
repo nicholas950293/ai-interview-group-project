@@ -22,6 +22,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.src.ai.fake_provider import FakeAiProvider
+from backend.src.auth.fake_auth import FakeAuthProvider
 from backend.src.config import load_settings
 from backend.src.email.fake_sender import FakeEmailSender
 from backend.src.main import create_app
@@ -194,13 +195,21 @@ def fake_email() -> FakeEmailSender:
 
 
 @pytest.fixture
-def app(settings, db, fake_ai, fake_sandbox, fake_email):
+def fake_auth() -> FakeAuthProvider:
+    """密碼驗證的替身。帳號由各測試自行註冊，預設為空——
+    避免任何測試不小心依賴一組「碰巧存在」的憑證。"""
+    return FakeAuthProvider()
+
+
+@pytest.fixture
+def app(settings, db, fake_ai, fake_sandbox, fake_email, fake_auth):
     return create_app(
         settings=settings,
         store_factory=lambda context: InMemoryDataStore(db, context),
         ai_provider=fake_ai,
         sandbox_runner=fake_sandbox,
         email_sender=fake_email,
+        auth_provider=fake_auth,
     )
 
 

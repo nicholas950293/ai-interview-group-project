@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登入｜AI 智慧招聘與技術考核系統</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/theme.css">
+  <link rel="stylesheet" href="./css/login.css">
+</head>
+<body>
+
+<div class="page">
+  <header class="topbar">
+    <div class="topbar__left">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">AI 智慧招聘與技術考核系統</span>
+    </div>
+  </header>
+
+  <main class="center">
+    <section class="panel login" aria-labelledby="login-heading">
+      <div class="panel__head">
+        <div class="panel__title">
+          <span class="accent-bar" aria-hidden="true"></span>
+          <h1 id="login-heading" class="panel__label">內部人員登入</h1>
+        </div>
+      </div>
+
+      <form id="login-form" class="login__body">
+        <label class="field" for="email">
+          <span class="field__label">EMAIL</span>
+          <input id="email" class="input" type="email" autocomplete="username"
+                 required placeholder="you@company.com">
+        </label>
+
+        <label class="field" for="password">
+          <span class="field__label">密碼</span>
+          <input id="password" class="input" type="password" autocomplete="current-password"
+                 required placeholder="請輸入密碼">
+        </label>
+
+        <p id="login-error" role="alert" hidden class="hidden form-error"></p>
+
+        <div class="login__actions">
+          <button id="btn-login" type="submit" class="btn btn--primary">登入</button>
+        </div>
+      </form>
+
+      <div class="panel__foot">
+        <span>應徵者請直接開啟信件中的專屬連結，不需要帳號</span>
+      </div>
+    </section>
+
+    <!-- demo 模式才顯示：合成帳號，非真實憑證 -->
+    <div id="demo-hint" hidden class="hidden notice notice--info"></div>
+  </main>
+</div>
+
+
+<!--
+  模組載入失敗時的保險。沒有這段，表單會退回瀏覽器的原生送出，把頁面刷成空白，
+  使用者看到的是「按了沒反應」而不是「頁面壞了」——真正的原因（例如快取到舊版
+  模組，導致 import 在連結階段就失敗）完全不會浮現。
+-->
+<script>
+  document.getElementById('login-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+  });
+  window.addEventListener('load', function () {
+    if (window.__pageReady) return;
+    var box = document.getElementById('login-error');
+    box.textContent = '頁面程式未正確載入，可能是瀏覽器快取到舊版檔案。'
+      + '請按 Cmd+Shift+R（Windows：Ctrl+F5）強制重新整理。';
+    box.hidden = false;
+    box.classList.remove('hidden');
+  });
+</script>
+
+<script type="module" src="./js/login.js"></script>
+</body>
+</html>

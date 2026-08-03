@@ -23,6 +23,9 @@ from backend.src.config import Settings
 ROLE_HR = "HR"
 ROLE_MANAGER = "MANAGER"
 ROLE_CANDIDATE = "CANDIDATE"
+# 已通過密碼驗證、但角色尚未查出的登入中身分（supabase/migrations/0012）。
+# 它只能讀自己在 internal_users 的那一列，其餘一律不可見。
+ROLE_AUTHENTICATED = "authenticated"
 ROLE_SYSTEM = "SYSTEM"
 
 # 唯附加資料表：0011_append_only.sql 撤銷 UPDATE 與 DELETE（FR-078）

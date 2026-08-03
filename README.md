@@ -13,6 +13,7 @@
 ```text
 backend/     FastAPI 服務。src/ 為程式碼，tests/ 為測試（憲章要求兩者分離）
 frontend/    靜態前端（原生 ES2022 模組，無建置流程）
+  login.html                                             內部人員登入（spec 004）
   index.html / manager.html / js/hr.js / js/manager.js   內部介面（HR、主管）
   js/api.js                                              對後端的唯一呼叫點
   css/theme.css                                          共用設計系統（色票、按鈕、卡片）
@@ -46,6 +47,7 @@ done
 
 # 5. 啟動 API（同時也會提供 frontend/ 的靜態檔，開發時用這個就夠）
 uvicorn backend.src.main:app --reload
+#    → http://localhost:8000/login.html                        內部人員登入
 #    → http://localhost:8000/                                 HR 總覽
 #    → http://localhost:8000/manager/ask.html                  面試官出題
 #    → http://localhost:8000/candidate/assessment.html?token=… 應徵者作答
@@ -59,6 +61,13 @@ uvicorn backend.src.main:app --reload
 # 本機 demo：記憶體資料 + 全替身服務，不需 Supabase、Docker 或 SMTP
 LOCAL_DEMO_MODE=1 uvicorn backend.src.main:app --reload
 ```
+
+demo 帳號（合成資料，非真實憑證）：`hr@example.com` 與 `manager@example.com`，
+密碼皆為 `demo1234`。登入頁會在 demo 模式下自行顯示這段提示。
+
+> **正式環境**：內部人員的密碼由 Supabase Auth 保管，本系統不儲存密碼。
+> 部署前必須套用 `supabase/migrations/0012_internal_users_bootstrap.sql`，
+> 否則登入會在查詢角色那一步失敗（原因見 [spec 004](specs/004-internal-login/spec.md)）。
 
 ## 測試
 
@@ -87,7 +96,7 @@ TEST_DATABASE_URL=postgresql://localhost/test_recruitment pytest -m postgres
 
 ```bash
 cd frontend
-node --test "candidate/tests/*.test.js" "manager/tests/*.test.js"   # 或 npm test
+npm test        # 等同 node --test tests/ candidate/tests/ manager/tests/
 ```
 
 `frontend/package.json` 只宣告 `"type": "module"` 與測試指令，不含任何相依套件——
@@ -150,6 +159,9 @@ ruff format backend --config backend/ruff.toml
 - [ ] 在具備 Docker 的環境執行 `pytest -m security`，確認沙箱隔離全數通過。
 - [ ] 以本機 PostgreSQL 執行 `TEST_DATABASE_URL=... pytest -m postgres`，確認 RLS 政策生效。
 - [ ] 依 [quickstart.md](specs/001-ai-recruitment-assessment/quickstart.md) 執行 11 個端到端情境。
+- [ ] **實測登入**。`SupabaseAuthProvider` 只通過離線契約測試，未對真實 Supabase 驗證過；
+      同時確認 `0012_internal_users_bootstrap.sql` 已套用，否則登入會在查詢角色時失敗
+      （[spec 004](specs/004-internal-login/verification.md)）。
 
 驗證狀態與尚未完成的項目記錄於
 [verification.md](specs/001-ai-recruitment-assessment/verification.md)。

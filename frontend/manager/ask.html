@@ -24,32 +24,13 @@
       <span class="pill"><span class="dot" aria-hidden="true"></span>面試官</span>
     </div>
     <div class="topbar__right">
+      <span id="who" class="meta-mono"></span>
       <a class="meta-mono" href="../manager.html">完整主管介面</a>
+      <button id="btn-logout" type="button" class="btn btn--quiet">登出</button>
     </div>
   </header>
 
   <main class="center">
-
-    <!-- 沒有 Manager token 時擋在這裡；本專案尚無登入頁，token 需由後台取得 -->
-    <section id="auth-panel" hidden class="hidden panel auth">
-      <div class="panel__head">
-        <div class="panel__title">
-          <span class="accent-bar" aria-hidden="true"></span>
-          <h2 class="panel__label">面試官身分</h2>
-        </div>
-      </div>
-      <form id="auth-form" class="auth__body">
-        <label class="field" for="auth-token">
-          <span class="field__label">MANAGER JWT</span>
-          <textarea id="auth-token" class="textarea textarea--mono" rows="3"
-                    placeholder="貼上主管的存取權杖…" spellcheck="false"></textarea>
-        </label>
-        <p class="hint">權杖會存在這台瀏覽器，之後不必重貼。與完整主管介面共用同一組。</p>
-        <div class="auth__actions">
-          <button type="submit" class="btn btn--primary">確認</button>
-        </div>
-      </form>
-    </section>
 
     <section id="ask-panel" hidden class="hidden panel ask">
       <div class="panel__head">
@@ -66,6 +47,9 @@
           <span class="field__label">送給誰</span>
           <select id="assessment-select" class="select"></select>
         </label>
+        <!-- 清單為空的說明。與 #ask-result 分開：那裡只放送出的結果，
+             否則「送出成功」會被「沒有待指派對象」蓋掉，讀起來像失敗。 -->
+        <p id="assessment-hint" hidden class="hidden hint hint--warn"></p>
 
         <label class="field" for="question-input">
           <span class="field__label">題目</span>
@@ -103,6 +87,26 @@
     <div id="ask-result" role="status" aria-live="polite" hidden class="hidden notice notice--info"></div>
   </main>
 </div>
+
+
+<!--
+  模組載入失敗時的保險。沒有這段，表單會退回瀏覽器的原生送出，把頁面刷成空白，
+  使用者看到的是「按了沒反應」而不是「頁面壞了」——真正的原因（例如快取到舊版
+  模組，導致 import 在連結階段就失敗）完全不會浮現。
+-->
+<script>
+  document.getElementById('ask-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+  });
+  window.addEventListener('load', function () {
+    if (window.__pageReady) return;
+    var box = document.getElementById('ask-error');
+    box.textContent = '頁面程式未正確載入，可能是瀏覽器快取到舊版檔案。'
+      + '請按 Cmd+Shift+R（Windows：Ctrl+F5）強制重新整理。';
+    box.hidden = false;
+    box.classList.remove('hidden');
+  });
+</script>
 
 <script type="module" src="./ask.js"></script>
 </body>

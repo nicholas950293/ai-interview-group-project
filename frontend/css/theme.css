@@ -312,6 +312,9 @@ body {
 }
 
 .notice--info { border-left-color: var(--accent-gold); }
+/* 成功要看得出來是成功，不能和一般告知長得一樣——送出是不可逆的動作，
+ * 操作者需要一眼確認它成功了 */
+.notice--success { border-left-color: #6f9c5a; background: #1a221a; border-color: #35502f; }
 .notice--warn { border-left-color: var(--accent); background: var(--ai-bubble-bg); border-color: var(--ai-bubble-border); }
 .notice--error { border-left-color: #b5564f; background: #241819; border-color: #5a3030; }
 
