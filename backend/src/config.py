@@ -44,6 +44,9 @@ class SupabaseSettings:
 class AiSettings:
     api_key: str | None
     model: str | None
+    # 哪些能力要走真實模型。解析與預設值見 backend/src/ai/scoped_provider.py，
+    # 此處只保存原始字串，避免設定層相依於 AI 層。
+    live_features_raw: str | None = None
 
     @property
     def configured(self) -> bool:
@@ -144,6 +147,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ai=AiSettings(
             api_key=_clean(env, "GEMINI_API_KEY"),
             model=_clean(env, "GEMINI_MODEL"),
+            live_features_raw=_clean(env, "AI_LIVE_FEATURES"),
         ),
         smtp=SmtpSettings(
             host=_clean(env, "SMTP_HOST"),

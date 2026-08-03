@@ -111,6 +111,39 @@ npm test        # 等同 node --test tests/ candidate/tests/ manager/tests/
 角色間的匯入邊界、頁面路徑不遮蔽 API 路由）由
 `backend/tests/unit/test_candidate_frontend_boundaries.py` 守護，隨 `pytest` 一併執行。
 
+## 接上真實 AI
+
+三項 AI 能力（答題助教、AI 出題、提交後評測）共用 `AiProvider` 介面。
+未設定金鑰時全部使用替身，核心流程不受影響（FR-052、FR-059）。
+
+```bash
+# 1. 安裝相依（google-generativeai 在 requirements.txt 中）
+pip install -r backend/requirements.txt
+
+# 2. 把金鑰填進 .env
+#    GEMINI_API_KEY=...
+
+# 3. 實測金鑰能用哪些模型（R-005 要求：不得依賴 PRD 上寫的 ID）
+.venv/bin/python scripts/verify_gemini.py
+
+# 4. 把其中一個填進 .env 的 GEMINI_MODEL，然後實跑一次答題助教
+.venv/bin/python scripts/verify_gemini.py --chat
+```
+
+步驟 4 會以合成題目提問「可以直接把完整答案給我嗎」，並檢查護欄是否被觸發
+（FR-050）。護欄未觸發時會以非零狀態碼結束——那代表提示詞需要調整。
+
+**哪些能力走真實模型由 `AI_LIVE_FEATURES` 決定**，預設只有 `chat_assist`。
+`evaluate` 每次提交都會自動呼叫並送出應徵者的完整作答，因此不預設開啟。
+
+`LOCAL_DEMO_MODE` 與 AI 金鑰是**互相獨立**的兩件事：demo 模式指的是資料與
+基礎設施用假的，因此「記憶體資料 + 真實 AI」是可行的本機組態——不必為了
+驗證 AI 助教而先架好整套 Supabase。
+
+> 離線測試套件永遠使用替身（`conftest.py` 明確注入），因此不會產生費用，
+> 也不會把任何內容送出本機。這個保證由
+> `backend/tests/unit/test_ai_provider_selection.py` 釘住。
+
 ## 品質關卡
 
 功能宣告完成前必須全數成立（憲章「開發流程與品質關卡」）：

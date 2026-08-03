@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.src.ai.fake_provider import FakeAiProvider
 from backend.src.ai.provider import AiProvider, AiUnavailableError
+from backend.src.ai.scoped_provider import ScopedAiProvider, parse_live_features
 from backend.src.audit.logger import REDACTED, scrub_text
 from backend.src.auth.fake_auth import build_demo_auth_provider
 from backend.src.config import Settings, load_settings
@@ -148,11 +149,27 @@ def _default_store_factory(settings: Settings) -> Any:
 
 
 def _default_ai_provider(settings: Settings) -> AiProvider:
-    if settings.demo_mode or not settings.ai.configured:
-        return FakeAiProvider()
+    """組裝 AI 供應商。
+
+    **demo 模式不再強制使用替身**：demo 模式的意義是「資料與基礎設施用假的」，
+    而 AI 金鑰是否存在是另一個獨立的決定。有金鑰就用真的，沒有就用替身——
+    這讓「記憶體資料 + 真實 AI」成為可行的本機組態。
+
+    但「有金鑰」不等於「三項能力全開」：evaluate 每次提交都會自動送出完整
+    作答，因此由 AI_LIVE_FEATURES 逐項決定，預設只開答題助教
+    （見 ai/scoped_provider.py）。
+    """
+    fallback = FakeAiProvider()
+    if not settings.ai.configured:
+        return fallback
+
+    features = parse_live_features(settings.ai.live_features_raw)
+    if not features:
+        return fallback
+
     from backend.src.ai.gemini_provider import GeminiProvider
 
-    return GeminiProvider(settings.ai)
+    return ScopedAiProvider(GeminiProvider(settings.ai), fallback, features)
 
 
 def _default_sandbox_runner(settings: Settings) -> SandboxRunner:
