@@ -37,6 +37,11 @@ def get_store_factory(request: Request) -> StoreFactory:
     return request.app.state.store_factory
 
 
+def get_auth_provider(request: Request) -> Any:
+    """內部使用者的密碼驗證器（FR-005）。回傳型別為 AuthProvider 協定。"""
+    return request.app.state.auth_provider
+
+
 def get_ai_provider(request: Request) -> AiProvider:
     return request.app.state.ai_provider
 

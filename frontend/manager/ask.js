@@ -7,23 +7,24 @@
 //
 // 唯一的判斷邏輯（一段文字 → Question）在 core/question-draft.js，可獨立測試。
 
-import { manager, getAuthToken, setAuthToken, ApiError } from '../js/api.js';
+import { manager, clearAuthToken, ApiError } from '../js/api.js';
+import { requireSession, handleAuthFailure, getProfile, goToLogin } from '../js/session.js';
 import { buildQuestion } from './core/question-draft.js';
-import { describeLoadFailure, isAuthFailure, NETWORK_ERROR } from './core/errors.js';
+import { describeLoadFailure, NETWORK_ERROR } from './core/errors.js';
 
 const el = (id) => document.getElementById(id);
 
 const dom = {
-  authPanel: el('auth-panel'),
-  authForm: el('auth-form'),
-  authToken: el('auth-token'),
   askPanel: el('ask-panel'),
   askForm: el('ask-form'),
   askMeta: el('ask-meta'),
   askError: el('ask-error'),
   askResult: el('ask-result'),
+  who: el('who'),
+  logout: el('btn-logout'),
   sendButton: el('btn-send'),
   assessmentSelect: el('assessment-select'),
+  assessmentHint: el('assessment-hint'),
   questionInput: el('question-input'),
   caseStdin: el('case-stdin'),
   caseStdout: el('case-stdout'),
@@ -31,8 +32,8 @@ const dom = {
 
 const MESSAGES = {
   NO_PENDING:
-    '目前沒有「待指派題目」的應徵者。只有這個狀態的考核能收題目——'
-    + '請先由 HR 建立考核，或確認你的權杖對應的部門正確（主管只看得到自己部門的考核）。',
+    '你的部門目前沒有「待指派題目」的應徵者。只有這個狀態的考核能收題目——'
+    + '請先由 HR 建立考核（主管只看得到自己部門的考核）。',
 };
 
 let busy = false;
@@ -64,13 +65,6 @@ function showResult(message, level = 'info') {
   dom.askResult.hidden = false;
 }
 
-function showAuth(message) {
-  setVisible(dom.askPanel, false);
-  setVisible(dom.authPanel, true);
-  if (message) showResult(message, 'error');
-  dom.authToken.focus();
-}
-
 // ── 應徵者清單 ────────────────────────────────────────────────────────
 
 function describe(assessment) {
@@ -91,7 +85,11 @@ function fillAssessments(pending) {
   dom.assessmentSelect.disabled = !hasTargets;
   dom.sendButton.disabled = !hasTargets;
   dom.askMeta.textContent = hasTargets ? `${pending.length} 位待指派` : '';
-  if (!hasTargets) showResult(MESSAGES.NO_PENDING, 'warn');
+
+  // 寫進 #assessment-hint 而非 #ask-result：送出成功後清單通常就空了，
+  // 若共用同一個位置，成功訊息會立刻被這句蓋掉，讀起來像送出失敗。
+  dom.assessmentHint.textContent = hasTargets ? '' : MESSAGES.NO_PENDING;
+  setVisible(dom.assessmentHint, !hasTargets);
 }
 
 async function loadAssessments() {
@@ -100,13 +98,11 @@ async function loadAssessments() {
     assessments = await manager.listAssessments();
   } catch (error) {
     const status = statusOf(error);
-    const message = describeLoadFailure(status, error?.message);
-    // 權杖問題才退回輸入畫面；其餘（網址錯、後端沒開）重貼權杖也解決不了
-    if (isAuthFailure(status)) return showAuth(message);
-    return showResult(message, 'error');
+    // 權杖過期就重新登入；其餘（網址錯、後端沒開）重新登入也解決不了
+    if (handleAuthFailure(status)) return;
+    return showResult(describeLoadFailure(status, error?.message), 'error');
   }
 
-  setVisible(dom.authPanel, false);
   setVisible(dom.askPanel, true);
   // 只有「待指派題目」的考核能收題目，其餘狀態送出會被後端以 409 擋下
   fillAssessments(assessments.filter((item) => item.status === 'PENDING_ASSIGN'));
@@ -114,13 +110,9 @@ async function loadAssessments() {
 
 // ── 送出 ──────────────────────────────────────────────────────────────
 
-dom.authForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const token = dom.authToken.value.trim();
-  if (!token) return;
-  setAuthToken(token);
-  dom.askResult.hidden = true;
-  await loadAssessments();
+dom.logout.addEventListener('click', () => {
+  clearAuthToken();
+  goToLogin();
 });
 
 dom.askForm.addEventListener('submit', async (event) => {
@@ -142,13 +134,14 @@ dom.askForm.addEventListener('submit', async (event) => {
   dom.sendButton.disabled = true;
   try {
     await manager.assignQuestion(assessmentId, draft.question);
-    showResult(
-      `已送出給 ${target}。該筆考核轉為「待應徵者作答」，`
-      + '應徵者開啟原本的專屬連結就會看到這道題目。',
-      'info',
-    );
     dom.askForm.reset();
+    // 先重載清單再顯示結果——反過來的話，清單重載時的空狀態會蓋掉成功訊息
     await loadAssessments();
+    showResult(
+      `✓ 題目已送給 ${target}。該筆考核轉為「待應徵者作答」，`
+      + '應徵者開啟原本的專屬連結就會看到這道題目。',
+      'success',
+    );
   } catch (error) {
     // 後端訊息在這裡是有價值的：缺測資、狀態不符都會回傳可行動的說明
     showError(describeLoadFailure(statusOf(error), error?.message));
@@ -160,5 +153,11 @@ dom.askForm.addEventListener('submit', async (event) => {
 
 // ── 啟動 ──────────────────────────────────────────────────────────────
 
-if (getAuthToken()) loadAssessments();
-else showAuth();
+if (requireSession()) {
+  const profile = getProfile();
+  if (profile) dom.who.textContent = `${profile.name}｜${profile.deptId || '全公司'}`;
+  loadAssessments();
+}
+
+// 標記模組已成功載入；HTML 的保險腳本以此判斷頁面是否正常
+window.__pageReady = true;

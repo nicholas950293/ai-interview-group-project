@@ -124,6 +124,32 @@ def seed_demo_database(db: InMemoryDatabase) -> None:
         },
     )
 
+    # 待指派題目，且屬 demo 主管所在的 ENG 部門——登入後就有對象可以出題。
+    # demo-assessment-002 刻意留在 DESIGN，用來呈現部門隔離（FR-003）：
+    # 以 demo 主管登入時看不到它。
+    db.insert_raw(
+        "assessments",
+        {
+            "id": "demo-assessment-004",
+            "name": "張小豪",
+            "email": "candidate4@example.com",
+            "phone": "0900-000-004",
+            "job_title": "資深後端工程師",
+            "dept_id": "ENG",
+            "assigned_manager_id": "demo-manager-user",
+            "status": "PENDING_ASSIGN",
+            "token": "demo-candidate-004",
+            "token_expires_at": now + timedelta(days=7),
+            "question_snapshot": None,
+            "candidate_answer": None,
+            "code_language": None,
+            "trial_run_count": 0,
+            "final_decision": None,
+            "submitted_at": None,
+            "created_at": now,
+        },
+    )
+
     db.insert_raw(
         "assessments",
         {

@@ -58,6 +58,16 @@
   color: var(--text-dim);
 }
 
+/* 清單為空的說明。與送出結果分屬不同區塊，兩者不會互相覆蓋。 */
+.hint--warn {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--ai-bubble-bg);
+  border: 1px solid var(--ai-bubble-border);
+  color: var(--text-label);
+}
+
 .ask__actions,
 .auth__actions { display: flex; justify-content: flex-end; }
 

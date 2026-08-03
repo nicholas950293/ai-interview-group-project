@@ -13,6 +13,7 @@
 ```text
 backend/     FastAPI 服務。src/ 為程式碼，tests/ 為測試（憲章要求兩者分離）
 frontend/    靜態前端（原生 ES2022 模組，無建置流程）
+  login.html                                             內部人員登入（spec 004）
   index.html / manager.html / js/hr.js / js/manager.js   內部介面（HR、主管）
   js/api.js                                              對後端的唯一呼叫點
   css/theme.css                                          共用設計系統（色票、按鈕、卡片）
@@ -46,6 +47,7 @@ done
 
 # 5. 啟動 API（同時也會提供 frontend/ 的靜態檔，開發時用這個就夠）
 uvicorn backend.src.main:app --reload
+#    → http://localhost:8000/login.html                        內部人員登入
 #    → http://localhost:8000/                                 HR 總覽
 #    → http://localhost:8000/manager/ask.html                  面試官出題
 #    → http://localhost:8000/candidate/assessment.html?token=… 應徵者作答
@@ -59,6 +61,20 @@ uvicorn backend.src.main:app --reload
 # 本機 demo：記憶體資料 + 全替身服務，不需 Supabase、Docker 或 SMTP
 LOCAL_DEMO_MODE=1 uvicorn backend.src.main:app --reload
 ```
+
+demo 帳號（合成資料，非真實憑證）：`hr@example.com` 與 `manager@example.com`，
+密碼皆為 `demo1234`。登入頁會在 demo 模式下自行顯示這段提示。
+
+**完整的 demo 流程（主管出題 → 應徵者作答 → 提交）**，含每一步的預期結果與邊界情境，
+見 [specs/003-manager-quick-ask/quickstart.md](specs/003-manager-quick-ask/quickstart.md)。
+
+> `LOCAL_DEMO_MODE` 只接受 `1`／`true`／`yes`／`on`。其餘值（含 `0`、`false`）
+> 一律視為關閉——demo 模式會把整個系統換成記憶體假資料與固定 JWT 密鑰，
+> 它的開關必須是「明確要求」才算數。
+
+> **正式環境**：內部人員的密碼由 Supabase Auth 保管，本系統不儲存密碼。
+> 部署前必須套用 `supabase/migrations/0012_internal_users_bootstrap.sql`，
+> 否則登入會在查詢角色那一步失敗（原因見 [spec 004](specs/004-internal-login/spec.md)）。
 
 ## 測試
 
@@ -87,13 +103,46 @@ TEST_DATABASE_URL=postgresql://localhost/test_recruitment pytest -m postgres
 
 ```bash
 cd frontend
-node --test "candidate/tests/*.test.js" "manager/tests/*.test.js"   # 或 npm test
+npm test        # 等同 node --test tests/ candidate/tests/ manager/tests/
 ```
 
 `frontend/package.json` 只宣告 `"type": "module"` 與測試指令，不含任何相依套件——
 專案維持「無建置流程」的既有決策。應徵者介面的結構性不變條件（禁止直接 `fetch`、
 角色間的匯入邊界、頁面路徑不遮蔽 API 路由）由
 `backend/tests/unit/test_candidate_frontend_boundaries.py` 守護，隨 `pytest` 一併執行。
+
+## 接上真實 AI
+
+三項 AI 能力（答題助教、AI 出題、提交後評測）共用 `AiProvider` 介面。
+未設定金鑰時全部使用替身，核心流程不受影響（FR-052、FR-059）。
+
+```bash
+# 1. 安裝相依（google-generativeai 在 requirements.txt 中）
+pip install -r backend/requirements.txt
+
+# 2. 把金鑰填進 .env
+#    GEMINI_API_KEY=...
+
+# 3. 實測金鑰能用哪些模型（R-005 要求：不得依賴 PRD 上寫的 ID）
+.venv/bin/python scripts/verify_gemini.py
+
+# 4. 把其中一個填進 .env 的 GEMINI_MODEL，然後實跑一次答題助教
+.venv/bin/python scripts/verify_gemini.py --chat
+```
+
+步驟 4 會以合成題目提問「可以直接把完整答案給我嗎」，並檢查護欄是否被觸發
+（FR-050）。護欄未觸發時會以非零狀態碼結束——那代表提示詞需要調整。
+
+**哪些能力走真實模型由 `AI_LIVE_FEATURES` 決定**，預設只有 `chat_assist`。
+`evaluate` 每次提交都會自動呼叫並送出應徵者的完整作答，因此不預設開啟。
+
+`LOCAL_DEMO_MODE` 與 AI 金鑰是**互相獨立**的兩件事：demo 模式指的是資料與
+基礎設施用假的，因此「記憶體資料 + 真實 AI」是可行的本機組態——不必為了
+驗證 AI 助教而先架好整套 Supabase。
+
+> 離線測試套件永遠使用替身（`conftest.py` 明確注入），因此不會產生費用，
+> 也不會把任何內容送出本機。這個保證由
+> `backend/tests/unit/test_ai_provider_selection.py` 釘住。
 
 ## 品質關卡
 
@@ -150,6 +199,9 @@ ruff format backend --config backend/ruff.toml
 - [ ] 在具備 Docker 的環境執行 `pytest -m security`，確認沙箱隔離全數通過。
 - [ ] 以本機 PostgreSQL 執行 `TEST_DATABASE_URL=... pytest -m postgres`，確認 RLS 政策生效。
 - [ ] 依 [quickstart.md](specs/001-ai-recruitment-assessment/quickstart.md) 執行 11 個端到端情境。
+- [ ] **實測登入**。`SupabaseAuthProvider` 只通過離線契約測試，未對真實 Supabase 驗證過；
+      同時確認 `0012_internal_users_bootstrap.sql` 已套用，否則登入會在查詢角色時失敗
+      （[spec 004](specs/004-internal-login/verification.md)）。
 
 驗證狀態與尚未完成的項目記錄於
 [verification.md](specs/001-ai-recruitment-assessment/verification.md)。

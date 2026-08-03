@@ -22,7 +22,7 @@ MANAGER_DIR = FRONTEND / "manager"
 PAGE = MANAGER_DIR / "ask.html"
 
 # 出題頁允許自 api.js 取用的匯出。`candidate` 與 `hr` 不在其中。
-ALLOWED_API_IMPORTS = frozenset({"manager", "getAuthToken", "setAuthToken", "ApiError"})
+ALLOWED_API_IMPORTS = frozenset({"manager", "clearAuthToken", "ApiError"})
 
 BROWSER_GLOBALS = ("document", "window", "fetch", "localStorage", "sessionStorage")
 

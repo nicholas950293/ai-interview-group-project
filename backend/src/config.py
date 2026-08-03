@@ -23,6 +23,7 @@ REQUIRED_KEYS = ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_JWT_SECRET")
 
 DEFAULT_TOKEN_TTL_DAYS = 7
 DEFAULT_MAX_TRIAL_RUNS = 20
+DEFAULT_SESSION_TTL_HOURS = 8
 DEFAULT_SANDBOX_CONCURRENCY = 10
 
 
@@ -43,6 +44,9 @@ class SupabaseSettings:
 class AiSettings:
     api_key: str | None
     model: str | None
+    # 哪些能力要走真實模型。解析與預設值見 backend/src/ai/scoped_provider.py，
+    # 此處只保存原始字串，避免設定層相依於 AI 層。
+    live_features_raw: str | None = None
 
     @property
     def configured(self) -> bool:
@@ -79,6 +83,8 @@ class Settings:
     max_trial_runs: int
     candidate_base_url: str
     demo_mode: bool
+    # 內部使用者登入後的權杖效期（FR-005）。應徵者的連結效期是另一回事，見 token_ttl_days。
+    session_ttl_hours: int
 
 
 def _clean(env: Mapping[str, str], key: str) -> str | None:
@@ -99,8 +105,16 @@ def _int(env: Mapping[str, str], key: str, default: int) -> int:
         raise ConfigError(f"環境變數 {key} 必須為整數，實際值不合法") from exc
 
 
+# demo 模式會把整個系統換成記憶體假資料、替身服務與固定的 JWT 密鑰。
+# 因此它的開關必須是「明確要求」才算數：`LOCAL_DEMO_MODE=0` 或 `=false`
+# 的意圖顯然是關閉，若沿用 `bool(值)` 判定會把它們讀成開啟——那是在正式環境
+# 靜默降級成無認證的假系統，屬於最不該有的失敗模式。
+DEMO_MODE_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
 def _is_demo_mode(env: Mapping[str, str]) -> bool:
-    return bool(_clean(env, "LOCAL_DEMO_MODE"))
+    raw = _clean(env, "LOCAL_DEMO_MODE")
+    return raw is not None and raw.lower() in DEMO_MODE_TRUE_VALUES
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -133,6 +147,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ai=AiSettings(
             api_key=_clean(env, "GEMINI_API_KEY"),
             model=_clean(env, "GEMINI_MODEL"),
+            live_features_raw=_clean(env, "AI_LIVE_FEATURES"),
         ),
         smtp=SmtpSettings(
             host=_clean(env, "SMTP_HOST"),
@@ -150,4 +165,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         max_trial_runs=_int(env, "MAX_TRIAL_RUNS", DEFAULT_MAX_TRIAL_RUNS),
         candidate_base_url=(_clean(env, "CANDIDATE_BASE_URL") or "").rstrip("/"),
         demo_mode=demo_mode,
+        session_ttl_hours=_int(env, "SESSION_TTL_HOURS", DEFAULT_SESSION_TTL_HOURS),
     )

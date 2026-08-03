@@ -22,6 +22,10 @@ export function setAuthToken(token) {
   window.localStorage.setItem(TOKEN_KEY, token);
 }
 
+export function clearAuthToken() {
+  window.localStorage.removeItem(TOKEN_KEY);
+}
+
 async function request(method, path, { body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (auth) {
@@ -60,6 +64,17 @@ function qs(params) {
   const encoded = search.toString();
   return encoded ? `?${encoded}` : '';
 }
+
+// ── 系統資訊（不需認證）────────────────────────────────────────────────
+export const system = {
+  health: () => request('GET', '/health', { auth: false }),
+};
+
+// ── 登入（尚未持有權杖，故不帶 Authorization）──────────────────────────
+export const auth = {
+  login: (email, password) =>
+    request('POST', '/auth/login', { body: { email, password }, auth: false }),
+};
 
 // ── HR ────────────────────────────────────────────────────────────────
 export const hr = {

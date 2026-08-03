@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test candidate/tests/*.test.js manager/tests/*.test.js"
+    "test": "node --test tests/*.test.js candidate/tests/*.test.js manager/tests/*.test.js"
   }
 }

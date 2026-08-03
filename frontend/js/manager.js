@@ -4,6 +4,7 @@
 // 後端的 ai-generate 端點不寫入任何資料表（FR-025）。
 
 import { manager, ApiError, STATUS_LABELS, DECISION_LABELS } from './api.js';
+import { requireSession, handleAuthFailure } from './session.js';
 
 const listEl = document.getElementById('assessment-list');
 const listEmpty = document.getElementById('list-empty');
@@ -397,11 +398,9 @@ function escapeHtml(value) {
 }
 
 function reportError(error) {
-  if (error instanceof ApiError && error.status === 401) {
-    window.alert('請先登入。');
-    return;
-  }
+  // 權杖過期就回登入頁；以前這裡只能 alert「請先登入」，因為還沒有登入頁
+  if (error instanceof ApiError && handleAuthFailure(error.status)) return;
   window.alert(error instanceof ApiError ? error.message : '操作失敗，請稍後再試。');
 }
 
-loadQuestionBank().then(loadAssessments);
+if (requireSession()) loadQuestionBank().then(loadAssessments);
