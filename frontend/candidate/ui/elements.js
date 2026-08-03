@@ -13,6 +13,9 @@ export function collectElements() {
     jobTitle: el('job-title'),
     expiresAt: el('expires-at'),
     trialRemaining: el('trial-remaining'),
+    // 只在可作答時才有意義的頁首區塊，終端狀態下整組隱藏
+    topbarMeta: el('topbar-meta'),
+    topbarActions: el('topbar-actions'),
 
     // 題目
     question: {
@@ -36,6 +39,7 @@ export function collectElements() {
       stdinField: el('stdin-field'),
       stdin: el('run-stdin'),
       submitDialog: el('submit-dialog'),
+      confirmMeta: el('confirm-meta'),
       trialRemaining: el('trial-remaining'),
     },
 
@@ -47,6 +51,7 @@ export function collectElements() {
       form: el('chat-form'),
       input: el('chat-input'),
       error: el('chat-error'),
+      quickAsks: el('chat-quick'),
     },
   };
 }

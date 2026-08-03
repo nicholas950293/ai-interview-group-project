@@ -4,103 +4,156 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>線上測驗｜AI 智慧招聘與技術考核系統</title>
-  <!-- Tailwind 為體驗；fallback.css 保證 CDN 不可用時頁面仍可讀（NFR-007） -->
-  <link rel="stylesheet" href="./css/fallback.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/candidate.css">
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body>
 
-  <header class="bg-white border-b border-slate-200">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <h1 id="job-title" class="text-lg font-semibold">線上測驗</h1>
-      <div class="text-sm text-slate-500">
-        <span id="expires-at"></span>
-        <span id="trial-remaining" class="ml-4"></span>
+<div class="app">
+
+  <header class="topbar">
+    <div class="topbar__left">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">線上測驗</span>
+      <div id="topbar-meta" class="topbar__meta">
+        <span class="topbar__divider" aria-hidden="true"></span>
+        <span id="job-title" class="job-title"></span>
+        <span class="pill"><span class="dot" aria-hidden="true"></span>作答中</span>
       </div>
+    </div>
+
+    <!--
+      作答期間才有意義的頁首控制項。逾期、已提交、載入失敗等終端狀態下整組隱藏——
+      提交鈕留在畫面上會讓應徵者以為還能送出，按下去只會拿到錯誤（FR-110）。
+    -->
+    <div id="topbar-actions" class="topbar__right">
+      <span id="expires-at" class="meta-mono"></span>
+      <span id="trial-remaining" class="meta-mono"></span>
+      <span class="topbar__divider" aria-hidden="true"></span>
+      <!-- 提交為不可逆的單次動作，因此固定在右上角、與作答區分離（FR-123） -->
+      <button id="btn-submit" type="button" class="btn btn--primary">提交作答</button>
     </div>
   </header>
 
   <!-- 逾期、題目準備中、已提交、載入失敗等狀態的單一提示區（FR-108～FR-110） -->
-  <div id="notice" role="status" aria-live="polite" hidden
-       class="hidden max-w-3xl mx-auto mt-10 rounded border p-6 text-sm"></div>
+  <div id="notice" role="status" aria-live="polite" hidden class="hidden notice"></div>
 
-  <main id="workspace" hidden class="hidden max-w-7xl mx-auto px-6 py-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+  <main id="workspace" hidden class="hidden main">
 
-    <section aria-labelledby="question-heading" class="space-y-4">
-      <article class="bg-white rounded border border-slate-200 p-4">
-        <h2 id="question-heading" class="sr-only">題目</h2>
-        <h3 id="question-title" class="text-base font-semibold"></h3>
-        <div id="question-description" class="mt-3 whitespace-pre-wrap text-sm"></div>
-        <div id="question-constraints" hidden class="mt-3 whitespace-pre-wrap text-sm text-slate-600"></div>
-        <div id="sample-cases" hidden class="mt-4 space-y-2 text-xs"></div>
-      </article>
+    <div class="workcol">
 
-      <!-- AI 助教（FR-128～FR-131）。故障時只影響這個區塊。 -->
-      <article aria-labelledby="chat-heading" class="bg-white rounded border border-slate-200 flex flex-col" style="max-height:420px">
-        <h2 id="chat-heading" class="px-4 py-3 text-sm font-semibold border-b border-slate-200">
-          AI 助教<span class="ml-2 font-normal text-xs text-slate-500">提供觀念引導，不提供完整解答</span>
-        </h2>
-        <div id="chat-log" role="log" aria-live="polite" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 text-sm"></div>
-        <form id="chat-form" class="border-t border-slate-200 p-3 flex gap-2">
-          <label for="chat-input" class="sr-only">向 AI 助教提問</label>
-          <input id="chat-input" class="flex-1 rounded border border-slate-300 p-2 text-sm" placeholder="輸入問題…" autocomplete="off">
-          <button type="submit" class="rounded bg-slate-900 px-3 py-2 text-sm text-white">送出</button>
-        </form>
-        <p id="chat-error" role="alert" hidden class="hidden px-4 pb-3 text-xs text-amber-700"></p>
-      </article>
-    </section>
+      <section class="panel panel--question" aria-labelledby="question-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="accent-bar" aria-hidden="true"></span>
+            <h2 id="question-heading" class="panel__label">題目</h2>
+          </div>
+          <span class="meta-mono">READ ONLY</span>
+        </div>
+        <div class="question-body">
+          <h3 id="question-title" class="question-title"></h3>
+          <div id="question-description" class="question-text"></div>
+          <div id="question-constraints" hidden class="question-text question-constraints"></div>
+          <div id="sample-cases" hidden class="samples"></div>
+        </div>
+      </section>
 
-    <section aria-labelledby="answer-heading" class="space-y-4">
-      <h2 id="answer-heading" class="sr-only">作答</h2>
-
-      <div class="bg-white rounded border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2">
-          <label id="language-field" class="text-sm" for="language-select">語言
-            <select id="language-select" class="ml-2 rounded border border-slate-300 p-1 text-sm">
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="go">Go</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-            </select>
-          </label>
-          <div class="flex gap-2">
-            <button id="btn-run" type="button" class="rounded border border-slate-300 px-3 py-1.5 text-sm">試跑</button>
-            <button id="btn-submit" type="button" class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">提交作答</button>
+      <section class="panel panel--answer" aria-labelledby="answer-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="accent-bar accent-bar--gold" aria-hidden="true"></span>
+            <h2 id="answer-heading" class="panel__label">你的作答</h2>
+          </div>
+          <div class="panel__tools">
+            <label id="language-field" class="lang" for="language-select">
+              <span class="lang__text">語言</span>
+              <select id="language-select" class="lang__select">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="go">Go</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+              </select>
+            </label>
+            <button id="btn-run" type="button" class="btn btn--ghost">試跑</button>
           </div>
         </div>
+
         <!-- 工程類：CodeMirror 掛載點；非工程類：文字作答（FR-112、FR-113） -->
-        <div id="code-editor" class="min-h-[320px]"></div>
+        <div id="code-editor" class="editor-host"></div>
         <label for="text-answer" class="sr-only">文字作答</label>
-        <textarea id="text-answer" rows="16" hidden class="hidden w-full p-4 text-sm" placeholder="請於此處作答…"></textarea>
-        <p id="submit-error" role="alert" hidden class="hidden px-4 pb-3 text-xs text-red-700"></p>
-      </div>
+        <textarea id="text-answer" rows="16" hidden class="hidden text-answer" placeholder="請於此處作答…"></textarea>
 
-      <div id="run-panel" class="bg-white rounded border border-slate-200">
-        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2 text-sm">
-          <span class="font-semibold">執行結果</span>
-          <span id="run-meta" class="text-xs text-slate-500"></span>
+        <p id="submit-error" role="alert" hidden class="hidden form-error"></p>
+
+        <div class="panel__foot">
+          <span>作答內容不會自動儲存</span>
+          <span>提交後不可修改</span>
         </div>
-        <label id="stdin-field" class="block px-4 pt-3 text-xs text-slate-500" for="run-stdin">標準輸入
-          <textarea id="run-stdin" rows="2" class="mt-1 w-full rounded border border-slate-300 p-2 font-mono text-xs"></textarea>
+      </section>
+
+      <section id="run-panel" class="panel panel--run" aria-labelledby="run-heading">
+        <div class="panel__head">
+          <div class="panel__title">
+            <span class="accent-bar accent-bar--gold" aria-hidden="true"></span>
+            <h2 id="run-heading" class="panel__label">執行結果</h2>
+          </div>
+          <span id="run-meta" class="meta-mono"></span>
+        </div>
+        <label id="stdin-field" class="stdin" for="run-stdin">
+          <span class="stdin__label">標準輸入</span>
+          <textarea id="run-stdin" rows="2" class="stdin__input" spellcheck="false"></textarea>
         </label>
-        <pre id="run-output" aria-live="polite" class="px-4 py-3 text-xs whitespace-pre-wrap font-mono"></pre>
+        <pre id="run-output" class="run-output" aria-live="polite"></pre>
+      </section>
+    </div>
+
+    <!-- AI 助教（FR-128～FR-131）。故障時只影響這個區塊。 -->
+    <aside class="aside" aria-labelledby="chat-heading">
+      <div class="aside__head">
+        <div class="aside__title">
+          <span class="ai-badge" aria-hidden="true">AI</span>
+          <h2 id="chat-heading" class="aside__name">AI 答題輔助</h2>
+        </div>
+        <span class="meta-mono">對話有記錄</span>
       </div>
-    </section>
+
+      <div id="chat-log" class="chat-log" role="log" aria-live="polite">
+        <div class="chat-hint">AI 助教只提供觀念引導，不會直接給出完整答案</div>
+      </div>
+
+      <div class="chat-foot">
+        <div id="chat-quick" class="chat-quick">
+          <button type="button" class="chip-btn" data-ask="這題的時間複雜度要求該怎麼分析？">複雜度怎麼分析？</button>
+          <button type="button" class="chip-btn" data-ask="這題有哪些邊界情境需要注意？">有哪些邊界情境？</button>
+        </div>
+        <form id="chat-form" class="composer">
+          <label for="chat-input" class="sr-only">向 AI 助教提問</label>
+          <textarea id="chat-input" class="composer__input" rows="1" placeholder="向 AI 提問…" autocomplete="off"></textarea>
+          <button type="submit" class="composer__send">送出</button>
+        </form>
+        <p id="chat-error" role="alert" hidden class="hidden chat-error"></p>
+      </div>
+    </aside>
   </main>
+</div>
 
-  <!-- 提交前確認（FR-123、FR-124）。不支援 <dialog> 時 answer.js 退回 window.confirm。 -->
-  <dialog id="submit-dialog" class="rounded border border-slate-300 p-0 max-w-md">
-    <form method="dialog" class="p-5 space-y-4 text-sm">
-      <h2 class="text-base font-semibold">確認提交作答</h2>
-      <p>提交後將無法修改作答，也不能再次提交。確定要提交嗎？</p>
-      <div class="flex justify-end gap-2">
-        <button value="cancel" class="rounded border border-slate-300 px-3 py-1.5">返回作答</button>
-        <button value="confirm" class="rounded bg-slate-900 px-3 py-1.5 text-white">確定提交</button>
-      </div>
-    </form>
-  </dialog>
+<!-- 提交前確認（FR-123、FR-124）。不支援 <dialog> 時 answer.js 退回 window.confirm。 -->
+<dialog id="submit-dialog" class="confirm">
+  <form method="dialog" class="confirm__body">
+    <h2 class="confirm__title">確定要提交作答嗎？</h2>
+    <p class="confirm__text">提交後將無法修改作答內容，也不能再次提交。AI 對話紀錄會一併送出給主管審閱。</p>
+    <div id="confirm-meta" class="confirm__meta"></div>
+    <div class="confirm__actions">
+      <button value="cancel" class="btn btn--quiet">再檢查一下</button>
+      <button value="confirm" class="btn btn--primary">確定提交</button>
+    </div>
+  </form>
+</dialog>
 
-  <script type="module" src="./main.js"></script>
+<script type="module" src="./main.js"></script>
 </body>
 </html>

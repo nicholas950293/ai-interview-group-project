@@ -21,7 +21,8 @@ AI、Email 與沙箱三者皆置於可替換介面之後，使預設測試套件
 **語言/版本**：Python 3.11+（後端）；JavaScript ES2022（前端，原生模組）
 
 **主要相依**：FastAPI、uvicorn、Pydantic v2、supabase-py、google-generativeai、
-Docker SDK for Python、httpx、PyJWT；前端為 Tailwind CSS CDN 與 CodeMirror 6 CDN
+Docker SDK for Python、httpx、PyJWT；前端為 CodeMirror 6 CDN
+（HR／主管頁另用 Tailwind CDN；應徵者頁自 spec 002 v2 起改為自帶樣式表）
 
 **儲存**：Supabase (PostgreSQL)。結構以版本控管的遷移檔定義於 `supabase/migrations/`
 

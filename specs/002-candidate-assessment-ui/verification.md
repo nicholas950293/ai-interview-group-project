@@ -21,7 +21,7 @@
 | `frontend/candidate/ui/editor.js` | 55 | CodeMirror 掛載與 fallback |
 | `frontend/candidate/ui/answer.js` | 146 | 語言、試跑、提交、確認對話 |
 | `frontend/candidate/ui/chat.js` | 102 | AI 助教 |
-| `frontend/candidate/css/fallback.css` | 66 | CDN 失效時的可讀性備援 |
+| `frontend/candidate/css/candidate.css` | 約 560 | 深色主題樣式表，隨頁面出貨、無 CSS CDN |
 | `frontend/candidate/tests/*.test.js` | 4 檔 | 純邏輯層的 50 項測試 |
 | `backend/tests/unit/test_candidate_frontend_boundaries.py` | 15 項 | 結構不變條件守門 |
 | `specs/002-candidate-assessment-ui/{spec,plan,tasks,quickstart,verification}.md` | — | 規格產出物 |
@@ -140,6 +140,46 @@ HR／主管路徑（401 UNAUTHORIZED）。
 
 分別為 150 與 146 行，貼近 NFR-005 的 ~150 行界線。兩者責任單一且不宜再拆
 （前者是組裝點，後者是單一互動面板），但後續若再加功能應先考慮拆分而非追加。
+
+## v2 視覺改版的補充驗證（2026-08-03）
+
+依 Claude Design 交接稿改為深色主題與左右兩欄版面。改動限於標記、樣式與 ui/ 層
+class 字串；`core/` 四個模組、`main.js` 的 API 呼叫路徑與資料綁定皆未變更。
+
+| 關卡 | 結果 |
+|------|------|
+| 前端純邏輯 | 50 passed（`core/` 未動，測試零修改仍通過——即等價性證明） |
+| 後端全套 | **286 passed**（改版前 284，新增 2 項守門） |
+| 實地渲染（Chrome headless 1440×900） | 可作答／找不到連結／已提交三種狀態皆正確 |
+
+### 改版中發現並修正的迴歸
+
+**終端狀態下頁首提交鈕仍可點擊**（FR-137）。提交鈕從工作區移到頁首後，
+`applyGate` 只隱藏工作區就不再足夠——逾期或已提交的應徵者會看到一顆按了必定
+失敗的提交鈕。這個缺陷是實地渲染「找不到連結」狀態時才發現的，
+純邏輯測試與靜態掃描都抓不到。
+
+### 改版中確認的降級行為
+
+無頭環境載入不到 `esm.sh`，CodeMirror 掛載失敗並**如預期退回純文字輸入框**
+（FR-114）。這是意外得到的一次真實降級驗證，非刻意安排。
+
+### 新增的不變條件
+
+- **INV-009**：`ui/elements.js` 查找的每個 id 都存在於 `assessment.html`
+  （`test_every_element_in_the_dom_contract_exists_in_the_markup`）。
+  改版最容易踩的雷就是動到 id——JS 拿到 `null`，畫面只是「某塊沒東西」，不會拋錯。
+- **INV-010**：頁面不引用 Tailwind CDN，且引用本地樣式表
+  （`test_candidate_page_styles_are_locally_owned`）。
+
+### 尚未驗證
+
+- **非工程類版面**：demo 種子資料只有工程類考核，文字作答版面（隱藏語言選擇、
+  試跑鈕、執行結果卡片）未經實地渲染確認。純邏輯層已由 `session-view.test.js` 覆蓋，
+  DOM 契約由 INV-009 覆蓋，但視覺結果未看過。
+- **提交確認視窗與試跑互動**：無頭截圖無法驅動點擊，`<dialog>` 的實際外觀、
+  焦點鎖定與試跑輸出的呈現仍需人工確認（見 [quickstart.md](quickstart.md)）。
+- **螢幕報讀器**：`role="status"` / `role="log"` / `aria-live` 已標註，未實測。
 
 ## 安全模型確認
 

@@ -19,7 +19,8 @@
 
 **語言/版本**：JavaScript ES2022（原生模組，無轉譯）
 
-**主要相依**：無新增。Tailwind CSS CDN 與 CodeMirror 6 CDN 維持既有用法
+**主要相依**：無新增。CodeMirror 6 CDN 維持既有用法；v2 視覺改版後樣式改為自帶，
+不再使用 Tailwind CDN（字型自 Google Fonts CDN 載入，失敗時退回系統字型）
 
 **測試**：
 - 純邏輯：Node 內建 `node:test`（Node 18+ 內建，零 npm 安裝）
@@ -126,7 +127,7 @@ frontend/
     │   ├── answer.js            # 語言、試跑、提交、確認對話
     │   └── chat.js              # AI 助教
     ├── css/
-    │   └── fallback.css         # Tailwind CDN 失效時的最小可讀性備援
+    │   └── candidate.css        # 隨頁面出貨的樣式表（深色主題，無 CSS CDN）
     └── tests/                   # node:test，無需瀏覽器
         ├── gate.test.js
         ├── session-view.test.js

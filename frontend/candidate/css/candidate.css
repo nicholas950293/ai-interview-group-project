@@ -1,0 +1,735 @@
+/* 應徵者作答介面的樣式（spec 002 FR-101、NFR-006、NFR-007）。
+ *
+ * 來源為 Claude Design 的「Candidate Answer Screen」設計稿，色票、間距、圓角
+ * 與字級皆直接取自該稿。
+ *
+ * 這一頁刻意**不使用 Tailwind CDN**：設計稿是精確的數值，用 utility class 逼近
+ * 只會失真；而且少一個 CDN 相依，就少一種「網路不順時應徵者看到破版」的失敗模式。
+ * 字型 CDN 失效時會退回系統字型，版面不受影響。
+ */
+
+:root {
+  --bg-page: #0f1114;
+  --bg-frame: #14171b;
+  --bg-header: #191c21;
+  --bg-panel: #1e2229;
+  --bg-panel-head: #23282f;
+  --bg-inset: #14171a;
+  --bg-chip: #262c33;
+
+  --border: #2b3138;
+  --border-strong: #333a42;
+  --border-chip: #3a424b;
+
+  --text: #eae7e2;
+  --text-strong: #f4f1ec;
+  --text-body: #b3aea5;
+  --text-label: #c2beb6;
+  --text-muted: #9aa0a8;
+  --text-dim: #757b84;
+
+  --accent: #c08b57;
+  --accent-warm: #d3a06a;
+  --accent-gold: #b39a5f;
+
+  --ai-bubble-bg: #241d16;
+  --ai-bubble-border: #4a3c2a;
+
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Noto Sans TC', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 兩種隱藏方式並存：ui/ 模組同時操作 hidden 屬性與 hidden class，
+ * 兩者都必須在樣式載入的第一時間生效，否則工作區會在狀態判定完成前閃現。 */
+[hidden],
+.hidden { display: none !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #343b43;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #454c55; background-clip: content-box; }
+
+@keyframes dcFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dcPop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes dcSlide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── 版面骨架 ──────────────────────────────────────────────────────── */
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-frame);
+  overflow: hidden;
+}
+
+/* ── 頁首 ──────────────────────────────────────────────────────────── */
+
+.topbar {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 18px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar__left,
+.topbar__right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar__right { gap: 10px; flex: none; }
+
+.topbar__divider { width: 1px; height: 18px; background: var(--border-strong); flex: none; }
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  background: linear-gradient(140deg, var(--accent-warm), #8a6238);
+}
+
+.brand-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.topbar__meta { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.job-title {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(35, 40, 47, .5);
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent-gold); flex: none; }
+
+.meta-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── 按鈕 ──────────────────────────────────────────────────────────── */
+
+.btn {
+  height: 30px;
+  padding: 0 15px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 6px 18px -8px var(--accent);
+}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.12); }
+
+.btn--ghost {
+  height: 26px;
+  padding: 0 11px;
+  background: var(--bg-chip);
+  border: 1px solid var(--border-chip);
+  color: var(--text-label);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.btn--ghost:hover:not(:disabled) { border-color: var(--accent); color: #e2c39d; }
+
+.btn--quiet {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-chip);
+  background: transparent;
+  color: var(--text-label);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.btn--quiet:hover { background: var(--bg-chip); }
+
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+/* ── 主要區域 ──────────────────────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.workcol {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+/* ── 面板卡片 ──────────────────────────────────────────────────────── */
+
+.panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel--question { flex: 1 1 32%; }
+.panel--answer { flex: 1 1 40%; }
+.panel--run { flex: 1 1 28%; }
+
+.panel__head {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  background: var(--bg-panel-head);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.panel__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-label);
+  white-space: nowrap;
+}
+
+.panel__tools { display: flex; align-items: center; gap: 10px; flex: none; }
+
+.panel__foot {
+  flex: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 14px;
+  background: var(--bg-panel-head);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.accent-bar { width: 3px; height: 13px; border-radius: 2px; background: var(--accent); flex: none; }
+.accent-bar--gold { background: var(--accent-gold); }
+
+/* ── 題目 ──────────────────────────────────────────────────────────── */
+
+.question-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 20px; }
+
+.question-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--text-strong);
+}
+
+.question-text {
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-body);
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+
+.question-constraints { margin-top: 16px; }
+
+.samples { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.sample {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-inset);
+}
+
+.sample__name {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--bg-chip);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.sample__grid { display: grid; gap: 1px; background: var(--border); }
+@media (min-width: 900px) { .sample__grid { grid-template-columns: 1fr 1fr; } }
+
+.sample__cell { background: var(--bg-inset); padding: 10px 12px; }
+
+.sample__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.sample__value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #d6d2ca;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── 作答 ──────────────────────────────────────────────────────────── */
+
+.lang { display: flex; align-items: center; gap: 6px; }
+.lang__text { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); }
+
+.lang__select {
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--bg-chip);
+  border: 1px solid var(--border-chip);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.lang__select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* flex 容器而非 block：CodeMirror 掛載失敗退回 textarea 時，
+ * 那個 textarea 的 flex:1 要有東西可以撐才會填滿整塊作答區（FR-114）。 */
+.editor-host {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-header);
+}
+
+/* CodeMirror 載入失敗時的退回輸入框，以及非工程類的文字作答區 */
+.answer-input,
+.text-answer {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  background: var(--bg-header);
+  color: #e2ded7;
+  font-size: 13px;
+  line-height: 1.75;
+  padding: 16px 18px;
+}
+
+.answer-input { font-family: var(--font-mono); }
+.text-answer { font-family: var(--font-sans); }
+.answer-input::placeholder,
+.text-answer::placeholder { color: #5f666e; }
+
+.form-error {
+  flex: none;
+  margin: 0;
+  padding: 8px 14px;
+  background: #2a1a1a;
+  border-top: 1px solid #5a3030;
+  color: #e0a0a0;
+  font-size: 12px;
+}
+
+/* ── 執行結果 ──────────────────────────────────────────────────────── */
+
+.stdin {
+  flex: none;
+  display: block;
+  padding: 10px 14px 0;
+  background: var(--bg-panel);
+}
+
+.stdin__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.stdin__input {
+  width: 100%;
+  resize: none;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+  color: #e2ded7;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  outline: none;
+}
+.stdin__input:focus-visible { border-color: var(--accent); }
+
+/* 刻意與 stdin 的輸入框長得不一樣：輸入是有邊框的欄位，輸出是滿版的主控台讀出區。
+ * 兩者若都做成圓角框，空白狀態下會變成兩個一模一樣的方塊，看不出誰是誰。 */
+.run-output {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  background: var(--bg-inset);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: #d6d2ca;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 空的主控台區塊看起來像壞掉，給它一個說明自己狀態的空狀態 */
+.run-output:empty::before {
+  content: '尚未試跑。撰寫程式碼後點右上角「試跑」即可看到輸出。';
+  color: var(--text-dim);
+}
+
+/* ── AI 助教 ───────────────────────────────────────────────────────── */
+
+.aside {
+  flex: none;
+  width: 392px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+}
+
+.aside__head {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: var(--bg-panel-head);
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(140deg, var(--accent-warm), #8a6238);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  font-family: var(--font-mono);
+  flex: none;
+}
+
+.aside__title { display: flex; align-items: center; gap: 9px; }
+.aside__name { font-size: 12.5px; font-weight: 600; color: var(--text); }
+
+.chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chat-hint {
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(35, 40, 47, .5);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.msg { display: flex; flex-direction: column; gap: 5px; animation: dcSlide .22s ease; }
+.msg--candidate { align-items: flex-end; }
+.msg--assistant { align-items: flex-start; }
+
+.msg__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+}
+.msg--assistant .msg__label { color: var(--accent); }
+
+.msg__bubble {
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg--candidate .msg__bubble {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: 12px 12px 4px 12px;
+  background: var(--bg-chip);
+  border: 1px solid var(--border-chip);
+  color: #e2ded7;
+}
+
+.msg--assistant .msg__bubble {
+  max-width: 92%;
+  padding: 11px 13px;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--ai-bubble-bg);
+  border: 1px solid var(--ai-bubble-border);
+  border-left: 2px solid var(--accent);
+  color: #d8d3ca;
+  line-height: 1.75;
+}
+
+.msg__guardrail {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.msg--pending .msg__bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 0;
+}
+
+.msg--pending .dot {
+  background: var(--accent);
+  animation: dcFade .9s ease-in-out infinite alternate;
+}
+
+.chat-foot {
+  flex: none;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.chat-quick { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+
+.chip-btn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-chip);
+  background: rgba(35, 40, 47, .5);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.chip-btn:hover { border-color: var(--accent); color: #e2c39d; }
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+}
+.composer:focus-within { border-color: var(--accent); }
+
+.composer__input {
+  flex: 1;
+  min-height: 0;
+  height: 38px;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #e2ded7;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 2px 0;
+}
+.composer__input::placeholder { color: #5f666e; }
+
+.composer__send {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.composer__send:hover { filter: brightness(1.12); }
+
+.chat-error {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #2a2418;
+  border: 1px solid #55482a;
+  color: #d3bd8a;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+/* ── 狀態提示（逾期、題目準備中、已提交、載入失敗）────────────────── */
+
+.notice {
+  margin: auto;
+  width: 440px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-chip);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 24px 60px -20px #000;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text-label);
+  text-wrap: pretty;
+  border-left: 3px solid var(--border-chip);
+  animation: dcPop .2s ease;
+}
+
+.notice--info { border-left-color: var(--accent-gold); }
+.notice--warn { border-left-color: var(--accent); background: #241d16; border-color: var(--ai-bubble-border); }
+.notice--error { border-left-color: #b5564f; background: #241819; border-color: #5a3030; }
+
+/* ── 提交確認 ──────────────────────────────────────────────────────── */
+
+dialog.confirm {
+  width: 400px;
+  max-width: calc(100vw - 40px);
+  padding: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-chip);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px -20px #000;
+  color: var(--text);
+}
+dialog.confirm::backdrop { background: rgba(10, 12, 14, .8); backdrop-filter: blur(3px); }
+dialog.confirm[open] { animation: dcPop .18s ease; }
+
+.confirm__body { padding: 22px; margin: 0; }
+.confirm__title { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+.confirm__text { font-size: 13px; line-height: 1.7; color: var(--text-muted); margin: 0; text-wrap: pretty; }
+
+.confirm__meta {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.confirm__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* ── 窄畫面：AI 對話移到題目下方，維持單欄可讀 ─────────────────────── */
+
+@media (max-width: 1024px) {
+  .app { height: auto; min-height: 100vh; overflow: visible; }
+  .main { flex-direction: column; overflow: visible; }
+  .aside { width: auto; border-left: none; border-top: 1px solid var(--border); height: 520px; }
+  .panel--question, .panel--answer, .panel--run { flex: none; height: 380px; }
+}

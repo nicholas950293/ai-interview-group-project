@@ -9,47 +9,64 @@
 
 import { CHAT_MESSAGES } from '../core/messages.js';
 
-const BUBBLE_CLASS = {
-  candidate: 'ml-8 rounded bg-slate-900 px-3 py-2 text-white whitespace-pre-wrap',
-  assistant: 'mr-8 rounded bg-slate-100 px-3 py-2 whitespace-pre-wrap',
-};
+const ROLE_LABEL = { candidate: '你', assistant: 'AI 助教' };
 
-export function createChatPanel({ log, form, input, error, onSend }) {
+function messageRow(role, modifier = '') {
+  const row = document.createElement('div');
+  row.className = `msg msg--${role}${modifier}`;
+
+  const label = document.createElement('div');
+  label.className = 'msg__label';
+  label.textContent = ROLE_LABEL[role] || role;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg__bubble';
+
+  row.append(label, bubble);
+  return { row, bubble };
+}
+
+export function createChatPanel({ log, form, input, error, quickAsks, onSend }) {
   let pending = false;
 
   function scrollToLatest() {
     log.scrollTop = log.scrollHeight;
   }
 
-  function appendBubble(role, content) {
-    const bubble = document.createElement('div');
-    bubble.className = BUBBLE_CLASS[role] || BUBBLE_CLASS.assistant;
+  function appendMessage(role, content) {
+    const { row, bubble } = messageRow(role);
     bubble.textContent = content;
-    log.append(bubble);
+    log.append(row);
     scrollToLatest();
-    return bubble;
+    return row;
+  }
+
+  /** 等待中的暫時訊息：小圓點 + 「思考中…」，與正式回覆的樣式明確區分。 */
+  function appendPending() {
+    const { row, bubble } = messageRow('assistant', ' msg--pending');
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    bubble.append(dot, document.createTextNode(CHAT_MESSAGES.PENDING));
+    log.append(row);
+    scrollToLatest();
+    return row;
   }
 
   function appendAssistant(reply, guardrailTriggered) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'mr-8 rounded bg-slate-100 px-3 py-2 space-y-1';
-
-    const body = document.createElement('div');
-    body.className = 'whitespace-pre-wrap';
-    body.textContent = reply;
-    wrapper.append(body);
+    const { row, bubble } = messageRow('assistant');
+    bubble.textContent = reply;
 
     if (guardrailTriggered) {
       // 讓應徵者知道助教是刻意不給完整解答，而不是回答得不好（FR-050）
       const hint = document.createElement('div');
-      hint.className = 'text-xs text-slate-500';
+      hint.className = 'msg__guardrail';
       hint.textContent = CHAT_MESSAGES.GUARDRAIL;
-      wrapper.append(hint);
+      bubble.append(hint);
     }
 
-    log.append(wrapper);
+    log.append(row);
     scrollToLatest();
-    return wrapper;
+    return row;
   }
 
   function showError(message) {
@@ -65,10 +82,9 @@ export function createChatPanel({ log, form, input, error, onSend }) {
 
   /** 以 session 回傳的對話歷程還原內容（FR-128）。 */
   function restore(history) {
-    log.replaceChildren();
     for (const message of history) {
       if (message.role === 'assistant') appendAssistant(message.content, message.guardrailTriggered);
-      else appendBubble(message.role, message.content);
+      else appendMessage(message.role, message.content);
     }
   }
 
@@ -81,9 +97,9 @@ export function createChatPanel({ log, form, input, error, onSend }) {
 
     pending = true;
     clearError();
-    appendBubble('candidate', message);
+    appendMessage('candidate', message);
     input.value = '';
-    const placeholder = appendBubble('assistant', CHAT_MESSAGES.PENDING);
+    const placeholder = appendPending();
 
     try {
       const result = await onSend(message);
@@ -95,6 +111,22 @@ export function createChatPanel({ log, form, input, error, onSend }) {
       showError(unavailable ? CHAT_MESSAGES.UNAVAILABLE : CHAT_MESSAGES.FAILED);
     } finally {
       pending = false;
+    }
+  });
+
+  // 常見問題捷徑：填入輸入框後走與手動送出完全相同的路徑，不另開請求管道
+  quickAsks?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-ask]');
+    if (!button || pending) return;
+    input.value = button.dataset.ask;
+    form.requestSubmit();
+  });
+
+  // Enter 送出、Shift+Enter 換行——與輸入框改為 textarea 後的預期一致
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form.requestSubmit();
     }
   });
 

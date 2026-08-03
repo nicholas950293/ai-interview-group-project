@@ -12,7 +12,7 @@
 
 ```text
 backend/     FastAPI 服務。src/ 為程式碼，tests/ 為測試（憲章要求兩者分離）
-frontend/    靜態前端（原生 ES2022 模組 + Tailwind CDN，無建置流程）
+frontend/    靜態前端（原生 ES2022 模組，無建置流程）
   index.html / manager.html / js/hr.js / js/manager.js   內部介面（HR、主管）
   js/api.js                                              對後端的唯一呼叫點
   candidate/                                             應徵者作答介面（獨立產品模組，spec 002）

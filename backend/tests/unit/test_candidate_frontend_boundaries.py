@@ -220,6 +220,32 @@ def test_internal_pages_are_untouched(demo_client: TestClient) -> None:
     assert "主管 Hub" in demo_client.get("/manager.html").text
 
 
+def test_every_element_in_the_dom_contract_exists_in_the_markup() -> None:
+    """ui/elements.js 是這一頁的 DOM 契約，標記必須提供其中每一個 id。
+
+    改版時最容易發生的退化就是動到 id：JS 拿到 null，畫面看起來只是「某塊沒東西」，
+    不會拋錯，也不會有任何測試失敗——除了這一項。
+    """
+    contract = _read(CANDIDATE_DIR / "ui" / "elements.js")
+    markup = _read(CANDIDATE_DIR / "assessment.html")
+
+    required = set(re.findall(r"""el\(['"]([^'"]+)['"]\)""", contract))
+    present = set(re.findall(r"""\bid=["']([^"']+)["']""", markup))
+
+    assert required, "elements.js 應查找至少一個 id，否則本檢查失去意義"
+    missing = sorted(required - present)
+    assert not missing, f"assessment.html 缺少 elements.js 需要的 id：{missing}"
+
+
+def test_candidate_page_styles_are_locally_owned() -> None:
+    """樣式表隨頁面出貨，不依賴 CSS CDN（NFR-007）。"""
+    markup = _read(CANDIDATE_DIR / "assessment.html")
+    assert "./css/candidate.css" in markup
+    assert (CANDIDATE_DIR / "css" / "candidate.css").is_file()
+    # 版面不得再依賴 Tailwind CDN——設計稿是精確數值，且少一個 CDN 少一種破版模式
+    assert "tailwindcss.com" not in markup
+
+
 def test_candidate_page_does_not_reference_internal_scripts() -> None:
     """應徵者頁面不得載入內部介面的腳本。"""
     markup = _read(CANDIDATE_DIR / "assessment.html")

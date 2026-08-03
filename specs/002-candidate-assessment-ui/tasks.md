@@ -76,7 +76,7 @@ description: "應徵者作答介面模組化：依使用者故事組織的實作
 ## Phase 4：入口與組裝
 
 - [X] T018 建立 `frontend/candidate/assessment.html`：區域標示、確認對話、對話容器、fallback CSS 連結（FR-101、FR-112、FR-113、NFR-006）
-- [X] T019 [P] 建立 `frontend/candidate/css/fallback.css`：Tailwind CDN 失效時的最小可讀性樣式（NFR-007）
+- [X] T019 [P] 建立 `frontend/candidate/css/candidate.css`：隨頁面出貨的樣式表（NFR-007）
 - [X] T020 實作 `frontend/candidate/main.js`：解析 token → `gateFromToken` → 載入 session → 依 gate 分派 → 掛載各 ui 模組（FR-104、FR-111）
 - [X] T021 改寫 `frontend/assessment.html` 為轉址頁，保留 `token` 查詢參數並提供可點擊的備援連結（FR-106）
 - [X] T022 刪除 `frontend/js/editor.js` 與 `frontend/js/chat.js`（已搬移完畢，FR-101）
@@ -105,6 +105,29 @@ description: "應徵者作答介面模組化：依使用者故事組織的實作
 - [X] T028 執行 `node --test frontend/candidate/tests/` 與 `cd backend && pytest`，確認全數通過且結果不低於 T001 的基準
 - [X] T029 執行 `ruff check backend --config backend/ruff.toml` 確認新增的 pytest 檔案通過 lint
 - [X] T030 建立 `specs/002-candidate-assessment-ui/verification.md`：記錄修改檔案、驗證結果與未完成風險
+
+---
+
+## Phase 7：v2 視覺改版（依 Claude Design 交接稿）
+
+**範圍**：僅標記、樣式與 ui/ 層的 class 字串。`core/`、API 呼叫路徑與資料綁定不動。
+
+- [X] T031 建立 `frontend/candidate/css/candidate.css`：以設計稿色票／字級／圓角建立
+      深色主題樣式表；移除 `fallback.css` 與 Tailwind CDN（FR-138、INV-010）
+- [X] T032 改寫 `frontend/candidate/assessment.html`：左右兩欄、提交鈕移至頁首右上角、
+      題目／作答／執行結果三張卡片、AI 對話側欄（FR-135、FR-136）
+- [X] T033 [P] 更新 `ui/notice.js`、`ui/question.js`、`ui/chat.js` 的 class 字串至新樣式
+- [X] T034 [P] 於 `ui/editor.js` 以 `EditorView.theme` 就地定義 CodeMirror 深色主題，
+      不另引入主題套件
+- [X] T035 修正終端狀態下頁首提交鈕仍可點擊的迴歸：`main.js` 的 `applyGate` 一併隱藏
+      `#topbar-actions` 與 `#topbar-meta`（FR-137）
+- [X] T036 [P] `ui/chat.js` 加入 Enter 送出與常見問題捷徑，兩者皆走既有的 form submit
+      路徑（FR-139、FR-140）
+- [X] T037 [P] `ui/answer.js` 於確認視窗顯示作答字數（FR-141）
+- [X] T038 新增守門測試 `test_every_element_in_the_dom_contract_exists_in_the_markup`
+      與 `test_candidate_page_styles_are_locally_owned`（INV-009、INV-010）
+- [X] T039 以無頭瀏覽器實地渲染驗證：可作答、找不到連結、已提交三種狀態
+- [X] T040 更新 spec.md「v2 視覺改版」章節、plan.md、quickstart.md 與 verification.md
 
 ---
 

@@ -4,15 +4,16 @@
 // 插進樣板字串再靠自寫的 escapeHtml 防護——那條防線只要有人漏加一次就破，
 // 而 textContent 本身就不會把內容當標記解析，沒有「漏加」這個失敗模式。
 
-function labelled(labelText, value) {
+function cell(labelText, value) {
   const block = document.createElement('div');
+  block.className = 'sample__cell';
 
   const label = document.createElement('div');
-  label.className = 'text-slate-500';
+  label.className = 'sample__label';
   label.textContent = labelText;
 
   const body = document.createElement('pre');
-  body.className = 'whitespace-pre-wrap';
+  body.className = 'sample__value';
   body.textContent = value;
 
   block.append(label, body);
@@ -21,15 +22,15 @@ function labelled(labelText, value) {
 
 function sampleCaseCard(sampleCase) {
   const card = document.createElement('div');
-  card.className = 'rounded border border-slate-200 p-2';
+  card.className = 'sample';
 
   const name = document.createElement('div');
-  name.className = 'font-medium';
+  name.className = 'sample__name';
   name.textContent = sampleCase.name;
 
   const grid = document.createElement('div');
-  grid.className = 'mt-1 grid gap-1 sm:grid-cols-2 font-mono';
-  grid.append(labelled('輸入', sampleCase.stdin), labelled('預期輸出', sampleCase.expectedStdout));
+  grid.className = 'sample__grid';
+  grid.append(cell('輸入', sampleCase.stdin), cell('預期輸出', sampleCase.expectedStdout));
 
   card.append(name, grid);
   return card;

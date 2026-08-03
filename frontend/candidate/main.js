@@ -50,9 +50,14 @@ function setVisible(element, visible) {
   element.classList.toggle('hidden', !visible);
 }
 
-/** 終端狀態一律隱藏工作區，題目內容不再顯示（FR-110）。 */
+/** 終端狀態一律隱藏工作區，題目內容不再顯示（FR-110）。
+ *
+ * 頁首的提交鈕與「作答中」標示也必須一起收掉：它們在頁首而不在工作區內，
+ * 若只隱藏工作區，逾期或已提交的應徵者會看到一顆按了必定失敗的提交鈕。 */
 function applyGate(gate) {
   setVisible(dom.workspace, false);
+  setVisible(dom.topbarActions, false);
+  setVisible(dom.topbarMeta, false);
   showNotice(dom.notice, gate);
 }
 
@@ -106,7 +111,8 @@ function render(view) {
   hideNotice(dom.notice);
   setVisible(dom.workspace, true);
 
-  dom.jobTitle.textContent = `線上測驗｜${view.jobTitle}`;
+  // 頁首已有「線上測驗」品牌標示，此處只放職缺名稱（設計稿的頁首分區）
+  dom.jobTitle.textContent = view.jobTitle;
   dom.expiresAt.textContent = expiresAtLabel(formatDate(view.expiresAt));
 
   renderQuestion(dom.question, view.question);

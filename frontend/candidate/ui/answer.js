@@ -40,6 +40,7 @@ export function createAnswerPanel({ elements, view, onRun, onSubmit }) {
     stdinField,
     stdin,
     submitDialog,
+    confirmMeta,
   } = elements;
 
   const editor = view.isEngineering ? createCodeEditor(codeHost) : null;
@@ -126,6 +127,8 @@ export function createAnswerPanel({ elements, view, onRun, onSubmit }) {
 
   submitButton.addEventListener('click', async () => {
     if (busy) return; // 進行中不重複送出（FR-127）
+    // 提交不可逆，所以確認視窗要讓應徵者看見自己正要送出多少內容
+    if (confirmMeta) confirmMeta.textContent = `作答字數 ${getAnswer().length}`;
     if (!(await confirmSubmit(submitDialog))) return; // 取消不送出任何請求（FR-124）
     setBusy(true);
     try {
