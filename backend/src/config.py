@@ -102,8 +102,16 @@ def _int(env: Mapping[str, str], key: str, default: int) -> int:
         raise ConfigError(f"環境變數 {key} 必須為整數，實際值不合法") from exc
 
 
+# demo 模式會把整個系統換成記憶體假資料、替身服務與固定的 JWT 密鑰。
+# 因此它的開關必須是「明確要求」才算數：`LOCAL_DEMO_MODE=0` 或 `=false`
+# 的意圖顯然是關閉，若沿用 `bool(值)` 判定會把它們讀成開啟——那是在正式環境
+# 靜默降級成無認證的假系統，屬於最不該有的失敗模式。
+DEMO_MODE_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
 def _is_demo_mode(env: Mapping[str, str]) -> bool:
-    return bool(_clean(env, "LOCAL_DEMO_MODE"))
+    raw = _clean(env, "LOCAL_DEMO_MODE")
+    return raw is not None and raw.lower() in DEMO_MODE_TRUE_VALUES
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:

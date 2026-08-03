@@ -53,6 +53,26 @@ description: "面試官簡易出題頁的實作任務清單"
 
 ---
 
+## Phase 6：端到端串接（QA 可操作的最小流程）
+
+**目的**：把分段皆綠的契約測試，串成一條可被 QA 手動走完、也可被自動化驗證的路徑。
+
+- [X] T018 修正 `_is_demo_mode`：`LOCAL_DEMO_MODE=0`／`false` 原本會**啟用** demo 模式
+      （`bool("0")` 為真）。改為只認 `1`／`true`／`yes`／`on`
+- [X] T019 建立 `backend/tests/unit/test_demo_mode_gate.py`：demo 開關的真值判定，
+      以及正式環境拒絕 demo JWT 密鑰、demo token 與 demo 帳號（20 項）
+- [X] T020 建立 `backend/tests/integration/test_demo_e2e_flow.py`：登入 → 看到同部門
+      待指派 → 指派 → 應徵者讀到題目 → 提交 → 狀態轉為待主管審核，
+      以及跨部門、未授權、錯誤 token、重複提交、隱藏測資不外洩（9 項）
+- [X] T021 建立 `quickstart.md`：QA 的手動操作手冊與邊界情境
+- [X] T022 更新 `README.md` 的 demo 流程與 `.env.example` 的 `LOCAL_DEMO_MODE` 說明
+
+**未修改（刻意）**：`api/candidate.py`、`api/manager.py`、`services/assessment_service.py`、
+`demo.py` 的部門配置、`frontend/candidate/`——端到端串接靠既有 API 完成，
+不需要動任何一條業務邏輯。
+
+---
+
 ## 完成定義
 
 1. `node --test` 與 `cd backend && pytest` 全數通過

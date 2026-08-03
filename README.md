@@ -65,6 +65,13 @@ LOCAL_DEMO_MODE=1 uvicorn backend.src.main:app --reload
 demo 帳號（合成資料，非真實憑證）：`hr@example.com` 與 `manager@example.com`，
 密碼皆為 `demo1234`。登入頁會在 demo 模式下自行顯示這段提示。
 
+**完整的 demo 流程（主管出題 → 應徵者作答 → 提交）**，含每一步的預期結果與邊界情境，
+見 [specs/003-manager-quick-ask/quickstart.md](specs/003-manager-quick-ask/quickstart.md)。
+
+> `LOCAL_DEMO_MODE` 只接受 `1`／`true`／`yes`／`on`。其餘值（含 `0`、`false`）
+> 一律視為關閉——demo 模式會把整個系統換成記憶體假資料與固定 JWT 密鑰，
+> 它的開關必須是「明確要求」才算數。
+
 > **正式環境**：內部人員的密碼由 Supabase Auth 保管，本系統不儲存密碼。
 > 部署前必須套用 `supabase/migrations/0012_internal_users_bootstrap.sql`，
 > 否則登入會在查詢角色那一步失敗（原因見 [spec 004](specs/004-internal-login/spec.md)）。

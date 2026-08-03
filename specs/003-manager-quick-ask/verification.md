@@ -104,6 +104,45 @@ port 5173）上開啟時，頁面正常顯示但 `/api/manager/assessments` 全�
 **驗證**：在 port 5173 實地重現，畫面現在顯示「找不到後端 API（404）。這一頁多半被開在
 只提供靜態檔的伺服器上——請改用有跑後端的網址…」。
 
+## 端到端串接的驗證（Phase 6）
+
+QA 可操作的最小流程已串通並自動化。
+
+| 關卡 | 結果 |
+|------|------|
+| 端到端流程 `tests/integration/test_demo_e2e_flow.py` | **9 passed** |
+| demo 開關與正式環境隔離 `tests/unit/test_demo_mode_gate.py` | **20 passed** |
+| 後端全套 | **334 passed, 33 skipped**（Phase 6 前 305） |
+| 前端 | **74 passed** |
+
+端到端測試逐步斷言的內容，與 [quickstart.md](quickstart.md) 的手動步驟一一對應：
+登入 → 只看到同部門的待指派（張小豪，且**陳小雯不在其中**）→ 出題前應徵者看到
+`PENDING_ASSIGN` 且無題目 → 指派 → 應徵者立刻讀到題目與範例測資 → 提交 →
+狀態轉為 `COMPLETED_AWAITING_REVIEW` → 主管端看得到狀態已推進。
+
+拒絕行為亦逐項覆蓋：跨部門指派、未帶憑證、錯誤 token、重複提交、隱藏測資不外洩。
+
+### Phase 6 發現的缺陷
+
+**`LOCAL_DEMO_MODE=0` 會啟用 demo 模式**（`bool("0")` 為真）。實測：
+
+```text
+LOCAL_DEMO_MODE='1'     → demo_mode=True
+LOCAL_DEMO_MODE='0'     → demo_mode=True   ← 想關掉，結果打開了
+LOCAL_DEMO_MODE='false' → demo_mode=True
+```
+
+在正式環境，這等於整個系統靜默降級為記憶體假資料 + 固定 JWT 密鑰的無認證系統。
+已改為只認 `1`／`true`／`yes`／`on`，並以 20 項測試釘住開關與正式環境的隔離。
+
+### 關於 demo 種子的部門配置
+
+需求原文建議把 `demo-candidate-002` 改成與 demo 主管同部門。**刻意未照做**：
+測試需求「Demo Manager 只能看到同部門的待指派考核」需要一筆**不同部門**的
+待指派考核才有東西可證。因此保留陳小雯（DESIGN）作為對照組，
+另以張小豪（ENG，`demo-candidate-004`）作為 QA 的操作對象——
+兩者在 quickstart 的表格中明確標示用途。
+
 ## 尚未完成與風險
 
 1. **沒有登入頁**（既有問題，非本功能造成）。專案至今沒有取得 JWT 的介面；
