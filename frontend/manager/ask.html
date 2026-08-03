@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>出題給應徵者｜AI 智慧招聘與技術考核系統</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- 與應徵者作答頁共用同一份設計系統 → 本頁專屬版面 -->
+  <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="./css/ask.css">
+</head>
+<body>
+
+<div class="page">
+
+  <header class="topbar">
+    <div class="topbar__left">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">出題</span>
+      <span class="topbar__divider" aria-hidden="true"></span>
+      <span class="pill"><span class="dot" aria-hidden="true"></span>面試官</span>
+    </div>
+    <div class="topbar__right">
+      <a class="meta-mono" href="../manager.html">完整主管介面</a>
+    </div>
+  </header>
+
+  <main class="center">
+
+    <!-- 沒有 Manager token 時擋在這裡；本專案尚無登入頁，token 需由後台取得 -->
+    <section id="auth-panel" hidden class="hidden panel auth">
+      <div class="panel__head">
+        <div class="panel__title">
+          <span class="accent-bar" aria-hidden="true"></span>
+          <h2 class="panel__label">面試官身分</h2>
+        </div>
+      </div>
+      <form id="auth-form" class="auth__body">
+        <label class="field" for="auth-token">
+          <span class="field__label">MANAGER JWT</span>
+          <textarea id="auth-token" class="textarea textarea--mono" rows="3"
+                    placeholder="貼上主管的存取權杖…" spellcheck="false"></textarea>
+        </label>
+        <p class="hint">權杖會存在這台瀏覽器，之後不必重貼。與完整主管介面共用同一組。</p>
+        <div class="auth__actions">
+          <button type="submit" class="btn btn--primary">確認</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="ask-panel" hidden class="hidden panel ask">
+      <div class="panel__head">
+        <div class="panel__title">
+          <span class="accent-bar" aria-hidden="true"></span>
+          <h2 class="panel__label">出題給應徵者</h2>
+        </div>
+        <span id="ask-meta" class="meta-mono"></span>
+      </div>
+
+      <form id="ask-form" class="ask__body">
+
+        <label class="field" for="assessment-select">
+          <span class="field__label">送給誰</span>
+          <select id="assessment-select" class="select"></select>
+        </label>
+
+        <label class="field" for="question-input">
+          <span class="field__label">題目</span>
+          <textarea id="question-input" class="textarea ask__question" rows="12"
+                    placeholder="第一行會成為題目標題，其餘為完整敘述。&#10;&#10;例如：&#10;實作一個帶 TTL 的 LRU 快取&#10;&#10;請設計並實作一個支援存活時間的 LRU 快取…"></textarea>
+        </label>
+
+        <!--
+          工程類職缺的題目後端強制要求至少一組測試案例（FR-026），
+          自動評測的正確性維度以此為客觀依據。非工程類可留白。
+        -->
+        <fieldset class="cases">
+          <legend class="field__label">範例測資</legend>
+          <div class="cases__grid">
+            <label class="field" for="case-stdin">
+              <span class="field__label">輸入</span>
+              <textarea id="case-stdin" class="textarea textarea--mono" rows="3" spellcheck="false"></textarea>
+            </label>
+            <label class="field" for="case-stdout">
+              <span class="field__label">預期輸出</span>
+              <textarea id="case-stdout" class="textarea textarea--mono" rows="3" spellcheck="false"></textarea>
+            </label>
+          </div>
+          <p class="hint">工程類職缺必填——自動評測要靠它判斷程式對不對。非工程類可留白。</p>
+        </fieldset>
+
+        <p id="ask-error" role="alert" hidden class="hidden form-error"></p>
+
+        <div class="ask__actions">
+          <button id="btn-send" type="submit" class="btn btn--primary">送出給應徵者</button>
+        </div>
+      </form>
+    </section>
+
+    <div id="ask-result" role="status" aria-live="polite" hidden class="hidden notice notice--info"></div>
+  </main>
+</div>
+
+<script type="module" src="./ask.js"></script>
+</body>
+</html>

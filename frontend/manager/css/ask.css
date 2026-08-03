@@ -1,0 +1,64 @@
+/* 出題頁的版面。
+ *
+ * 色票、按鈕、卡片、表單元件全部來自 ../../css/theme.css——本檔只負責
+ * 「一張置中的卡片」這件事，刻意不定義任何顏色或字級。
+ */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-frame);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 20px;
+}
+
+.panel.ask,
+.panel.auth {
+  width: 640px;
+  max-width: 100%;
+  animation: dcPop .2s ease;
+}
+
+.panel.auth { width: 520px; }
+
+.ask__body,
+.auth__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+.ask__question { line-height: 1.75; }
+
+.cases {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-inset);
+}
+
+.cases__grid { display: grid; gap: 12px; }
+@media (min-width: 560px) { .cases__grid { grid-template-columns: 1fr 1fr; } }
+
+.hint {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.ask__actions,
+.auth__actions { display: flex; justify-content: flex-end; }
+
+#ask-result { width: 640px; max-width: 100%; }

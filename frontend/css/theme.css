@@ -1,0 +1,327 @@
+/* 共用設計系統層。
+ *
+ * 來源為 Claude Design 的「Candidate Answer Screen」設計稿。抽出來的目的很單純：
+ * 應徵者頁與面試官頁必須看起來是同一個產品，而「同一套」如果靠複製色碼維持，
+ * 下次有人只改其中一邊就會開始漂移。色票、字級、圓角與共用元件只有這一份定義。
+ *
+ * 這裡只放跨頁共用的東西。頁面專屬的版面（作答頁的三欄卡片、出題頁的置中表單）
+ * 各自留在自己的樣式表。
+ *
+ * 兩份使用者：
+ *   frontend/candidate/assessment.html → css/candidate.css
+ *   frontend/manager/ask.html          → css/ask.css
+ */
+
+:root {
+  --bg-page: #0f1114;
+  --bg-frame: #14171b;
+  --bg-header: #191c21;
+  --bg-panel: #1e2229;
+  --bg-panel-head: #23282f;
+  --bg-inset: #14171a;
+  --bg-chip: #262c33;
+
+  --border: #2b3138;
+  --border-strong: #333a42;
+  --border-chip: #3a424b;
+
+  --text: #eae7e2;
+  --text-strong: #f4f1ec;
+  --text-body: #b3aea5;
+  --text-label: #c2beb6;
+  --text-muted: #9aa0a8;
+  --text-dim: #757b84;
+
+  --accent: #c08b57;
+  --accent-warm: #d3a06a;
+  --accent-gold: #b39a5f;
+
+  --ai-bubble-bg: #241d16;
+  --ai-bubble-border: #4a3c2a;
+
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Noto Sans TC', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-page);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 兩種隱藏方式並存：ui/ 模組同時操作 hidden 屬性與 hidden class，
+ * 兩者都必須在樣式載入的第一時間生效，否則內容會在狀態判定完成前閃現。 */
+[hidden],
+.hidden { display: none !important; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #343b43;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #454c55; background-clip: content-box; }
+
+@keyframes dcFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dcPop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes dcSlide { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ── 頁首 ──────────────────────────────────────────────────────────── */
+
+.topbar {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 18px;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar__left,
+.topbar__right { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.topbar__right { gap: 10px; flex: none; }
+
+.topbar__divider { width: 1px; height: 18px; background: var(--border-strong); flex: none; }
+
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  background: linear-gradient(140deg, var(--accent-warm), #8a6238);
+}
+
+.brand-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.pill {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(35, 40, 47, .5);
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent-gold); flex: none; }
+
+.meta-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── 按鈕 ──────────────────────────────────────────────────────────── */
+
+.btn {
+  height: 30px;
+  padding: 0 15px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .14) inset, 0 6px 18px -8px var(--accent);
+}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.12); }
+
+.btn--ghost {
+  height: 26px;
+  padding: 0 11px;
+  background: var(--bg-chip);
+  border: 1px solid var(--border-chip);
+  color: var(--text-label);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.btn--ghost:hover:not(:disabled) { border-color: var(--accent); color: #e2c39d; }
+
+.btn--quiet {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-chip);
+  background: transparent;
+  color: var(--text-label);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.btn--quiet:hover { background: var(--bg-chip); }
+
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+/* ── 面板卡片 ──────────────────────────────────────────────────────── */
+
+.panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel__head {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  background: var(--bg-panel-head);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.panel__label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-label);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.panel__tools { display: flex; align-items: center; gap: 10px; flex: none; }
+
+.panel__foot {
+  flex: none;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 14px;
+  background: var(--bg-panel-head);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.accent-bar { width: 3px; height: 13px; border-radius: 2px; background: var(--accent); flex: none; }
+.accent-bar--gold { background: var(--accent-gold); }
+
+/* ── 表單元件 ──────────────────────────────────────────────────────── */
+
+.field { display: block; }
+
+.field__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-inset);
+  color: #e2ded7;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.textarea { resize: vertical; }
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible { border-color: var(--accent); }
+.input::placeholder,
+.textarea::placeholder { color: #5f666e; }
+
+.input--mono,
+.textarea--mono { font-family: var(--font-mono); font-size: 12px; }
+
+.select { cursor: pointer; }
+.select:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── 狀態訊息 ──────────────────────────────────────────────────────── */
+
+.notice {
+  width: 440px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-chip);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 24px 60px -20px #000;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--text-label);
+  text-wrap: pretty;
+  border-left: 3px solid var(--border-chip);
+  animation: dcPop .2s ease;
+}
+
+.notice--info { border-left-color: var(--accent-gold); }
+.notice--warn { border-left-color: var(--accent); background: var(--ai-bubble-bg); border-color: var(--ai-bubble-border); }
+.notice--error { border-left-color: #b5564f; background: #241819; border-color: #5a3030; }
+
+.form-error {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #2a1a1a;
+  border: 1px solid #5a3030;
+  color: #e0a0a0;
+  font-size: 12px;
+  line-height: 1.6;
+}
