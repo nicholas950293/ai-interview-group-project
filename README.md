@@ -15,9 +15,11 @@ backend/     FastAPI 服務。src/ 為程式碼，tests/ 為測試（憲章要�
 frontend/    靜態前端（原生 ES2022 模組，無建置流程）
   index.html / manager.html / js/hr.js / js/manager.js   內部介面（HR、主管）
   js/api.js                                              對後端的唯一呼叫點
-  candidate/                                             應徵者作答介面（獨立產品模組，spec 002）
+  css/theme.css                                          共用設計系統（色票、按鈕、卡片）
+  candidate/                                             應徵者作答介面（spec 002）
     core/   純邏輯，不碰 DOM，可於 Node 直接測試
     ui/     DOM 綁定，不做判定、不呼叫 API
+  manager/                                               面試官簡易出題頁（spec 003）
 sandbox/     五種語言的沙箱映像檔定義
 supabase/    版本控管的資料庫遷移檔與合成測試資料
 specs/       規格、計畫、資料模型、契約與任務清單
@@ -42,11 +44,20 @@ for lang in javascript python go java cpp; do
   docker build -t "sandbox-$lang" "sandbox/$lang"
 done
 
-# 5. 啟動 API
+# 5. 啟動 API（同時也會提供 frontend/ 的靜態檔，開發時用這個就夠）
 uvicorn backend.src.main:app --reload
+#    → http://localhost:8000/                                 HR 總覽
+#    → http://localhost:8000/manager/ask.html                  面試官出題
+#    → http://localhost:8000/candidate/assessment.html?token=… 應徵者作答
+```
 
-# 6. 前端為靜態檔案，以任意靜態伺服器提供 frontend/
-python3 -m http.server 5173 --directory frontend
+> **不要用純靜態伺服器開前端。** `python3 -m http.server --directory frontend`
+> 這類伺服器給得出頁面，但 `/api/*` 會全部 404，畫面看起來像壞掉。
+> 前端與後端必須同源，或由反向代理把 `/api` 指向後端。
+
+```bash
+# 本機 demo：記憶體資料 + 全替身服務，不需 Supabase、Docker 或 SMTP
+LOCAL_DEMO_MODE=1 uvicorn backend.src.main:app --reload
 ```
 
 ## 測試
@@ -71,12 +82,12 @@ TEST_DATABASE_URL=postgresql://localhost/test_recruitment pytest -m postgres
 
 ### 前端測試
 
-應徵者介面的純邏輯層（`frontend/candidate/core/`）以 Node 內建的測試執行器驗證，
+前端的純邏輯層（`candidate/core/`、`manager/core/`）以 Node 內建的測試執行器驗證，
 不需要 npm 安裝、瀏覽器或網路（需 Node 18 以上）：
 
 ```bash
 cd frontend
-node --test "candidate/tests/*.test.js"   # 或 npm test
+node --test "candidate/tests/*.test.js" "manager/tests/*.test.js"   # 或 npm test
 ```
 
 `frontend/package.json` 只宣告 `"type": "module"` 與測試指令，不含任何相依套件——

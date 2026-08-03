@@ -91,13 +91,15 @@ def test_import_boundary_between_roles_holds_in_both_directions() -> None:
     """INV-002：應徵者與內部介面互不相依（FR-102）。"""
     for path in _sources(CANDIDATE_DIR, (".js",)):
         for source in _import_sources(_read(path)):
-            assert "hr.js" not in source, f"{path.name} 匯入了 HR 模組"
-            assert "manager.js" not in source, f"{path.name} 匯入了主管模組"
+            assert "hr" not in source, f"{path.name} 匯入了 HR 模組"
+            # 涵蓋 js/manager.js 與 manager/ 目錄底下的任何模組
+            assert "manager" not in source, f"{path.name} 匯入了主管模組"
 
-    for name in ("hr.js", "manager.js"):
-        content = _read(FRONTEND / "js" / name)
-        for source in _import_sources(content):
-            assert "candidate/" not in source, f"{name} 匯入了應徵者模組"
+    internal_js = [FRONTEND / "js" / "hr.js", FRONTEND / "js" / "manager.js"]
+    internal_js += _sources(FRONTEND / "manager", (".js",))
+    for path in internal_js:
+        for source in _import_sources(_read(path)):
+            assert "candidate" not in source, f"{path.name} 匯入了應徵者模組"
 
 
 def test_candidate_only_imports_its_own_api_namespace() -> None:
@@ -242,6 +244,9 @@ def test_candidate_page_styles_are_locally_owned() -> None:
     markup = _read(CANDIDATE_DIR / "assessment.html")
     assert "./css/candidate.css" in markup
     assert (CANDIDATE_DIR / "css" / "candidate.css").is_file()
+    # 共用設計系統層：色票與元件只有一份定義，兩個角色的頁面才不會視覺漂移
+    assert "../css/theme.css" in markup
+    assert (FRONTEND / "css" / "theme.css").is_file()
     # 版面不得再依賴 Tailwind CDN——設計稿是精確數值，且少一個 CDN 少一種破版模式
     assert "tailwindcss.com" not in markup
 
